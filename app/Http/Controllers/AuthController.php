@@ -6,37 +6,40 @@ use App\Models\User; // Modelmu pakai nama User tapi mengacu ke tabel 'pengguna'
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
     // REGISTER
     public function register(Request $request)
-    {
-        $validated = $request->validate([
-            'nama' => 'required|string',
-            'email' => 'required|email|unique:pengguna,email',
-            'kata_sandi' => 'required|string|min:6',
-            'peran' => 'required|in:pemesan,penyedia,admin',
-            'no_hp' => 'required',
-        ]);
+{
+    $validated = $request->validate([
+        'nama' => 'required|string|max:255',
+        'email' => 'required|email|unique:pengguna,email',
+        'kata_sandi' => 'required|string|min:6',
+        'peran' => 'required|string',
+        'no_hp' => 'required|string|max:20',
+    ]);
 
-        $user = User::create([
-            'nama' => $validated['nama'],
-            'email' => $validated['email'],
-            'kata_sandi' => Hash::make($validated['kata_sandi']),
-            'peran' => $validated['peran'],
-            'no_hp' => $validated['no_hp'],
-            // kolom timestamp otomatis oleh Laravel (created_at & updated_at)
-        ]);
+    $user = \App\Models\User::create([
+        'id' => Str::uuid()->toString(), // ✅ ini penting!
+        'nama' => $validated['nama'],
+        'email' => $validated['email'],
+        'kata_sandi' => bcrypt($validated['kata_sandi']),
+        'peran' => $validated['peran'],
+        'no_hp' => $validated['no_hp'],
+    ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+    $user->assignRole($validated['peran']);
 
-        return response()->json([
-            'message' => 'Registrasi berhasil',
-            'token' => $token,
-            'user' => $user,
-        ]);
-    }
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    return response()->json([
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+        'user' => $user
+    ]);
+}
 
     // LOGIN
     public function login(Request $request)

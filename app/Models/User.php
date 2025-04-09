@@ -13,7 +13,6 @@ class User extends Authenticatable
 
     protected $table = 'pengguna';
     protected $fillable = ['id','nama', 'email', 'kata_sandi', 'peran', 'no_hp'];
-
     protected $hidden = ['kata_sandi'];
     public $incrementing = false;
     protected $keyType = 'string';

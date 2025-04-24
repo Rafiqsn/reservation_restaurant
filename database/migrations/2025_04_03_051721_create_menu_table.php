@@ -13,7 +13,7 @@ return new class extends Migration {
             $table->text('deskripsi')->nullable();
             $table->decimal('harga', 10, 2);
             $table->longText('foto')->nullable();
-            $table->enum('status', ['tersedia', 'tidak_tersedia']);
+            $table->enum('status', ['tersedia', 'tidak_tersedia'])->default('tersedia');
             $table->timestamps();
 
             $table->foreign('restoran_id')->references('id')->on('restoran')->onDelete('cascade');

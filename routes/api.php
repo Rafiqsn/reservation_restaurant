@@ -5,10 +5,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\RestaurantController;
 
 // Rute publik (tanpa autentikasi)
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/register', [AuthController::class, 'register'])->name('register');
 
 // Rute yang butuh token login
 
@@ -32,6 +33,11 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     })->middleware(['role:admin'])->name('admin.page');
 
+
+
+
+    //Admin Field
+
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::apiResource('users', AdminController::class)->only([
             'index', 'store', 'show', 'update', 'destroy'
@@ -39,7 +45,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('customers', CustomerController::class)->only([
             'index', 'show', 'update','destroy'
         ]);
+        Route::apiResource('restoran', RestaurantController::class)->only([
+          'store',  'show', 'update', 'destroy'
+        ]);
     });
+
+
+    //Penyedia Restoran field
+
+    Route::middleware(['role:penyedia'])->prefix('penyedia')->group(function () {
+        Route::apiResource('restoran', RestaurantController::class)->only([
+            'show', 'update',
+        ]);
+    });
+
+
+
+
+
+
 
 });
 

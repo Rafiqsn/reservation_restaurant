@@ -13,11 +13,8 @@ return new class extends Migration {
             $table->text('lokasi');
             $table->text('deskripsi')->nullable();
             $table->enum('status', ['buka', 'tutup']);
-            $table->time('jam_operasional');
             $table->string('kontak');
             $table->longText('foto')->nullable();
-            $table->longText('foto_sorotan_menu')->nullable();
-            $table->text('sorotan_menu')->nullable();
             $table->timestamps();
 
             $table->foreign('pemilik_id')->references('id')->on('pengguna')->onDelete('cascade');

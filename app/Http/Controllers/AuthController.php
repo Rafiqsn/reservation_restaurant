@@ -10,36 +10,32 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    // REGISTER
     public function register(Request $request)
-{
-    $validated = $request->validate([
-        'nama' => 'required|string|max:255',
-        'email' => 'required|email|unique:pengguna,email',
-        'kata_sandi' => 'required|string|min:6',
-        'peran' => 'required|string',
-        'no_hp' => 'required|string|max:20',
-    ]);
+    {
+        $validated = $request->validate([
+            'nama' => 'required|string|max:255',
+            'email' => 'required|email|unique:pengguna,email',
+            'kata_sandi' => 'required|string|min:6',
+            'no_hp' => 'required|string|max:20',
+        ]);
 
-    $user = \App\Models\User::create([
-        'id' => Str::uuid()->toString(), // ✅ ini penting!
-        'nama' => $validated['nama'],
-        'email' => $validated['email'],
-        'kata_sandi' => bcrypt($validated['kata_sandi']),
-        'peran' => $validated['peran'],
-        'no_hp' => $validated['no_hp'],
-    ]);
+        $user = User::create([
+            'id' => Str::uuid()->toString(),
+            'nama' => $validated['nama'],
+            'email' => $validated['email'],
+            'kata_sandi' => bcrypt($validated['kata_sandi']),
+            'peran' => 'pemesan', // ⬅️ langsung tetapkan peran sebagai pemesan
+            'no_hp' => $validated['no_hp'],
+        ]);
 
-    $user->assignRole($validated['peran']);
+        $token = $user->createToken('auth_token')->plainTextToken;
 
-    $token = $user->createToken('auth_token')->plainTextToken;
-
-    return response()->json([
-        'access_token' => $token,
-        'token_type' => 'Bearer',
-        'user' => $user
-    ]);
-}
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user
+        ]);
+    }
 
     // LOGIN
     public function login(Request $request)

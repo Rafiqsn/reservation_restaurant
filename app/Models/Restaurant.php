@@ -10,7 +10,15 @@ class Restaurant extends Model
     use HasFactory;
 
     protected $table = 'restoran';
-    protected $fillable = ['pemilik_id', 'nama', 'lokasi', 'deskripsi', 'status', 'kontak'];
+    protected $fillable = [
+        'id',
+        'pemilik_id',
+        'nama',
+        'lokasi',
+        'deskripsi',
+        'status',
+        'kontak'
+    ];
 
     public function owner()
     {
@@ -26,4 +34,10 @@ class Restaurant extends Model
     {
         return $this->hasMany(Menu::class, 'restoran_id');
     }
+
+    public function jamOperasional()
+    {
+        return $this->hasMany(JamOperasional::class, 'restoran_id');
+    }
+
 }

@@ -25,7 +25,7 @@ class User extends Authenticatable
 
     public function restaurants()
     {
-        return $this->hasMany(Restaurant::class, 'pemilik_id');
+        return $this->hasOne(Restaurant::class, 'pemilik_id');
     }
 
     public function Notifikasi()

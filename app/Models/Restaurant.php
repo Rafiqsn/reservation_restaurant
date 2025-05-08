@@ -19,7 +19,8 @@ class Restaurant extends Model
         'status',
         'kontak'
     ];
-
+    public $incrementing = false;
+    protected $keyType = 'string';
     public function owner()
     {
         return $this->belongsTo(User::class, 'pemilik_id');

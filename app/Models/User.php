@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Auth\Passwords\CanResetPassword;
 
 class User extends Authenticatable
 {
-    use HasApiTokens,HasFactory, Notifiable;
+    use HasApiTokens,HasFactory, Notifiable,CanResetPassword;
 
     protected $table = 'pengguna';
     protected $fillable = ['id','nama', 'email', 'kata_sandi', 'peran', 'no_hp'];
@@ -18,17 +20,17 @@ class User extends Authenticatable
     protected $keyType = 'string';
 
 
-    public function reservations()
+    public function reservasi()
     {
         return $this->hasMany(Reservation::class, 'pengguna_id');
     }
 
-    public function restaurants()
+    public function restoran()
     {
         return $this->hasOne(Restaurant::class, 'pemilik_id');
     }
 
-    public function Notifikasi()
+    public function notifikasi()
     {
         return $this->hasMany(Notifikasi::class, 'pengguna_id');
     }

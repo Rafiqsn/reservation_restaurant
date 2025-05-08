@@ -17,12 +17,13 @@ class PenggunaSeeder extends Seeder
             'email' => 'admin@example.com',
             'kata_sandi' => Hash::make('admin123'),
             'no_hp' => '081234567890',
+            'peran' => 'admin',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
         $admin->id = (string) Str::uuid();
         $admin->save();
-        $admin->assignRole('admin');
+
 
         // Penyedia
         $penyedia = new User([
@@ -30,12 +31,13 @@ class PenggunaSeeder extends Seeder
             'email' => 'penyedia@example.com',
             'kata_sandi' => Hash::make('penyedia123'),
             'no_hp' => '081234567891',
+            'peran' => 'penyedia',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
         $penyedia->id = (string) Str::uuid();
         $penyedia->save();
-        $penyedia->assignRole('penyedia');
+
 
         // Pemesan
         $pemesan = new User([
@@ -43,11 +45,24 @@ class PenggunaSeeder extends Seeder
             'email' => 'pemesan@example.com',
             'kata_sandi' => Hash::make('pemesan123'),
             'no_hp' => '081234567892',
+            'peran' => 'pemesan',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
         $pemesan->id = (string) Str::uuid();
         $pemesan->save();
-        $pemesan->assignRole('pemesan');
+
+        $pemesan = new User([
+            'nama' => 'Rafiq',
+            'email' => 'rafiqrafiq2006@gmail.com',
+            'kata_sandi' => Hash::make('rafiqgans123'),
+            'no_hp' => '081234567892',
+            'peran' => 'pemesan',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $pemesan->id = (string) Str::uuid();
+        $pemesan->save();
+
     }
 }

@@ -45,6 +45,7 @@ class CustomerController extends Controller
         public function show(string $id)
     {
         $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
+        return new UserResource($user);
     }
 
 

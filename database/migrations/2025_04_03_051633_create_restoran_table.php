@@ -12,9 +12,11 @@ return new class extends Migration {
             $table->string('nama');
             $table->text('lokasi');
             $table->text('deskripsi')->nullable();
-            $table->enum('status', ['buka', 'tutup']);
+            $table->enum('status', ['buka', 'tutup'])->default('buka');
             $table->string('kontak');
             $table->longText('foto')->nullable();
+            $table->string('nib')->nullable();
+            $table->string('surat_halal')->nullable();
             $table->timestamps();
 
             $table->foreign('pemilik_id')->references('id')->on('pengguna')->onDelete('cascade');

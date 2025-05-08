@@ -8,8 +8,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call([
-            RoleSeeder::class,     // Buat role dulu
+        $this->call([    // Buat role dulu
             PenggunaSeeder::class, // Lalu assign ke user
         ]);
     }

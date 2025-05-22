@@ -8,9 +8,19 @@ use Illuminate\Database\Eloquent\Model;
 class Table extends Model
 {
     use HasFactory;
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'kursi';
-    protected $fillable = ['restoran_id', 'nomor_kursi', 'kapasitas', 'posisi', 'status'];
+    protected $fillable = [
+        'id',
+        'restoran_id',
+        'nomor_kursi',
+        'kapasitas',
+        'posisi',
+        'status',
+        'denah_meja',
+    ];
 
     public function restaurant()
     {

@@ -14,7 +14,28 @@ use App\Http\Resources\RestaurantResource;
 
 class AdminController extends Controller
 {
-    // GET /admin/users
+
+    //dashboard
+    public function dashboard()
+    {
+        $totalPelanggan = User::where('peran', 'pemesan')->count();
+        $totalRestoran = Restaurant::count();
+
+        $restoranBaru = User::where('peran', 'penyedia')
+            ->with('restoran:id,pemilik_id,nama') // relasi restoran
+            ->latest()
+            ->take(5)
+            ->get(['id', 'email']);
+        $userBaru = User::where('peran', 'pemesan')->latest()->take(5)->get(['nama', 'email']);
+
+        return response()->json([
+            'total_pelanggan' => $totalPelanggan,
+            'total_restoran' => $totalRestoran,
+            'restoran_baru' => $restoranBaru,
+            'user_baru' => $userBaru,
+        ]);
+    }
+    // manajemen user
         public function index()
     {
         $users = User::where('peran', 'penyedia')->get();
@@ -196,4 +217,92 @@ class AdminController extends Controller
         ], 500);
     }
     }
+
+        public function toggleRecommendation(Request $request, $id)
+    {
+        $resto = Restaurant::findOrFail($id);
+
+        // Validasi input
+        $validated = $request->validate([
+            'is_recommended' => 'required|boolean',
+        ]);
+
+        // Update status
+        $resto->is_recommended = $validated['is_recommended'];
+        $resto->save();
+
+        return response()->json([
+            'message' => 'Status rekomendasi berhasil diperbarui.',
+            'data' => $resto
+        ]);
+    }
+
+    public function adminIndex()
+    {
+        $restaurants = Restaurant::select('id', 'nama', 'deskripsi', 'lokasi as alamat', 'foto', 'is_recommended as sematkan')
+                        ->orderBy('created_at', 'desc')
+                        ->paginate(10); // bisa pakai pagination
+
+        return response()->json($restaurants);
+    }
+
+    public function adminProfileShow($id)
+    {
+        $user = User::where('peran', 'admin')->findOrFail($id);
+
+        return response()->json([
+            'nama' => $user->nama,
+            'email' => $user->email,
+            'no_hp' => $user->no_hp,
+        ]);
+
+
+    }
+
+
+    //edit profil field
+        public function adminProfileUpdate(Request $request, $id)
+    {
+        $user = User::where('peran', 'admin')->findOrFail($id);
+
+
+        $validated = $request->validate([
+            'nama' => 'sometimes|string|max:255',
+            'email' => [
+                'sometimes',
+                'email',
+                Rule::unique('pengguna')->ignore($user->id),
+            ],
+            'no_hp' => 'sometimes|string|max:20',
+            'kata_sandi' => 'nullable|string',
+            'kata_sandi_baru' => 'nullable|string|min:8|confirmed',
+        ]);
+
+
+        if (isset($validated['nama'])) $user->nama = $validated['nama'];
+        if (isset($validated['email'])) $user->email = $validated['email'];
+        if (isset($validated['no_hp'])) $user->no_hp = $validated['no_hp'];
+
+        // Password update logic
+        if (!empty($validated['kata_sandi_baru'])) {
+            if (!Hash::check($validated['kata_sandi'], $user->kata_sandi)) {
+                return response()->json(['message' => 'Password lama salah'], 422);
+            }
+            $user->kata_sandi = Hash::make($validated['kata_sandi_baru']);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profil berhasil diperbarui',
+            'user' => [
+                'nama' => $user->nama,
+                'email' => $user->email,
+                'no_hp' => $user->no_hp,
+            ],
+        ]);
+    }
+
+
+
 }

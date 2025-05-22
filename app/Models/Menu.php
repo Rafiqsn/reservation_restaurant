@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class Menu extends Model
 {
     use HasFactory;
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'menu';
-    protected $fillable = ['restoran_id', 'nama', 'deskripsi', 'harga', 'status'];
+    protected $fillable = ['id','restoran_id', 'nama', 'deskripsi', 'harga', 'status','foto'];
 
     public function restaurant()
     {

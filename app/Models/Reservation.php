@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class Reservation extends Model
 {
     use HasFactory;
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'reservasi';
     protected $fillable = ['pengguna_id', 'restoran_id', 'kursi_id', 'tanggal', 'waktu', 'status'];

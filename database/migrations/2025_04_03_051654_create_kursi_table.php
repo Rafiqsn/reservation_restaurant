@@ -11,8 +11,9 @@ return new class extends Migration {
             $table->uuid('restoran_id');
             $table->integer('nomor_kursi');
             $table->integer('kapasitas');
-            $table->text('posisi');
+            $table->enum('posisi', ['didalam', 'diluar']);
             $table->enum('status', ['tersedia', 'dipesan']);
+            $table->longText('denah_meja')->nullable();
             $table->timestamps();
 
             $table->foreign('restoran_id')->references('id')->on('restoran')->onDelete('cascade');

@@ -22,7 +22,7 @@ Route::get('/landing/resto', [LandingPageController::class, 'index']);
 // Rute yang butuh token login
 
 
-Route::middleware('auth:sanctum')->group(function () {
+//Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -46,7 +46,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     //Admin Field
-    Route::middleware(['role:admin'])->prefix('admin')->group(function () {
+   // Route::middleware(['role:admin'])->prefix('admin')->group(function () {
+   Route::prefix('admin')->group(function () {
         //dashboard
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
         // users
@@ -77,14 +78,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     //Penyedia Restoran field
-    Route::middleware(['role:penyedia'])->prefix('penyedia')->group(function () {
+    //Route::middleware(['role:penyedia'])->prefix('penyedia')->group(function () {
         //dashboard
+        Route::prefix('penyedia')->group(function () {
         Route::get('/dashboard', [RestaurantController::class, 'dashboard']);
         //manajemen meja
 
         Route::prefix('kursi')->group(function () {
-            Route::get('/{id}', [KursiController::class, 'index']);
-            Route::post('/', [KursiController::class, 'store']);
+            Route::get('', [KursiController::class, 'index']);
+            Route::post('', [KursiController::class, 'store']);
             Route::post('/upload-denah/{id}', [KursiController::class, 'uploadDenah']);
             Route::delete('/{id}', [KursiController::class, 'destroy']);
         });
@@ -109,11 +111,20 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
    //pemesan Field
-   Route::middleware(['role:pemesan'])->prefix('pemesan')->group(function () {
+   //Route::middleware(['role:pemesan'])->prefix('pemesan')->group(function () {
+    Route::prefix('pemesan')->group(function () {
+        Route::get('/restoran', [CustomerController::class, 'search']);
+        Route::get('/restoran', [CustomerController::class, 'index']);
+        Route::get('/restoran/{id}', [CustomerController::class, 'show']);
+
+        Route::post('/reservasi/cek-ketersediaan', [ReservasiController::class, 'cekKetersediaan']);
+
+        Route::get('/reservasi/menu', [ReservasiController::class, 'getMenu']);
+        Route::post('/reservasi/menu', [ReservasiController::class, 'tampilkanMenu']);
 
     });
 
 
 
-});
+//});
 

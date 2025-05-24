@@ -12,10 +12,58 @@ use Illuminate\Support\Facades\Validator;
 
 class RestaurantController extends Controller
 {
-    public function dashboard()
-    {
+    public function dashboard(Request $request)
+{
+    $user = $request->user();
+    $restoran = $user->restoran;
 
+    if (!$restoran) {
+        return response()->json(['message' => 'Restoran tidak ditemukan'], 404);
     }
+
+    // Ambil total pelanggan unik
+    $totalPelanggan = $restoran->reservasi()->distinct('pengguna_id')->count('pengguna_id');
+
+    // Total semua reservasi
+    $totalReservasi = $restoran->reservasi()->count();
+
+    // Total dibatalkan
+    $totalDibatalkan = $restoran->reservasi()->where('status', 'dibatalkan')->count();
+
+    // Ambil status restoran dan jam operasional
+    $status = $restoran->status; // 'buka' atau 'tutup'
+    $jamOperasional = [
+        'dari' => $restoran->jam_buka,
+        'sampai' => $restoran->jam_tutup,
+    ];
+
+    // Ambil 4 reservasi terbaru
+    $reservasiTerbaru = $restoran->reservasi()
+        ->latest()
+        ->take(4)
+        ->with(['pengguna', 'kursi']) // pastikan relasi ada di model
+        ->get()
+        ->map(function ($r) {
+            return [
+                'nama' => $r->user->name,
+                'kapasitas' => $r->kapasitas,
+                'waktu' => $r->jam_mulai . '-' . $r->jam_selesai,
+                'nomor_kursi' => $r->kursi->nomor_kursi,
+            ];
+        });
+
+    return response()->json([
+        'statistik' => [
+            'total_pelanggan' => $totalPelanggan,
+            'total_reservasi' => $totalReservasi,
+            'total_dibatalkan' => $totalDibatalkan,
+            'status' => ucfirst($status),
+        ],
+        'jam_operasional' => $jamOperasional,
+        'reservasi_terbaru' => $reservasiTerbaru,
+    ]);
+}
+
 
     public function index()
     {
@@ -43,16 +91,16 @@ class RestaurantController extends Controller
     }
 
     public function show($id)
-{
-    try {
-        $restaurant = Restaurant::with(['owner', 'tables', 'menus', 'jamOperasional'])->findOrFail($id);
-        return new RestaurantResource($restaurant);
-    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-        return response()->json(['error' => 'Restaurant not found'], 404);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+    {
+        try {
+            $restaurant = Restaurant::with(['owner', 'tables', 'menus', 'jamOperasional'])->findOrFail($id);
+            return new RestaurantResource($restaurant);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Restaurant not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
-}
 
 
     public function update(Request $request, $id)

@@ -16,6 +16,7 @@ class MenuResource extends JsonResource
             'harga' => $this->harga,
             'foto' => $this->foto,
             'status' => $this->status,
+            'highlight' => $this->status,
         ];
     }
 }

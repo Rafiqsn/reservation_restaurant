@@ -6,42 +6,61 @@ use App\Models\Table;
 use App\Http\Resources\TableResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class KursiController extends Controller{
 
-    public function index($id)
+
+    public function index(Request $request)
     {
-        return response()->json([
-            'data' => Table::where('restoran_id', $id)->get()
-        ]);
+        $restoranId = $request->user()->restoran->id;
+
+        $kursi = Table::where('restoran_id', $restoranId)->get();
+
+        return response()->json($kursi);
     }
 
-
-
-    public function store(Request $request)
+        public function store(Request $request)
     {
-        $request->validate([
-            'restoran_id' => 'required|uuid',
-            'nomor_kursi' => 'required|integer',
+        $user = Auth::user();
+
+        if (!$user->restoran) {
+            return response()->json(['message' => 'Restoran tidak ditemukan untuk user ini.'], 404);
+        }
+
+        $restoranId = $user->restoran->id;
+
+        $validator = Validator::make($request->all(), [
+            'nomor_kursi' => [
+                'required',
+                'integer',
+                Rule::unique('kursi')->where(function ($query) use ($restoranId) {
+                    return $query->where('restoran_id', $restoranId);
+                }),
+            ],
             'kapasitas' => 'required|integer',
             'posisi' => 'required|in:didalam,diluar',
             'status' => 'required|in:tersedia,dipesan',
         ]);
 
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
         $kursi = Table::create([
             'id' => Str::uuid(),
-            'restoran_id' => $request->restoran_id,
             'nomor_kursi' => $request->nomor_kursi,
+            'restoran_id' => $restoranId,
             'kapasitas' => $request->kapasitas,
             'posisi' => $request->posisi,
             'status' => $request->status,
-            'denah_meja' => null // default null jika belum ada
+            'denah_meja' => null
         ]);
 
         return response()->json(['message' => 'Kursi berhasil ditambahkan', 'data' => $kursi]);
     }
-
-
 
 
     public function uploadDenah(Request $request, $id)

@@ -8,11 +8,92 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use App\Http\Resources\UserResource;
+use App\Models\Restaurant;
+use App\Http\Resources\RestaurantResource;
 
 class CustomerController extends Controller
 {
     // GET /admin/customers
-    public function index()
+    public function index(Request $request)
+    {
+        // Rekomendasi Restoran
+        $recommended = Restaurant::select('nama', 'deskripsi', 'foto')
+            ->where('is_recommended', true)
+            ->take(6)
+            ->get();
+
+        // Restoran Terbaru
+        $newest = Restaurant::select('nama', 'deskripsi', 'foto')
+            ->orderBy('created_at', 'desc')
+            ->take(6)
+            ->get();
+
+        // Restoran Terdekat (jika koordinat tersedia)
+        $nearest = collect(); // Kosongkan default-nya
+        if ($request->has(['lat', 'lng'])) {
+            $lat = $request->lat;
+            $lng = $request->lng;
+
+            $nearest = Restaurant::selectRaw("
+                    nama, deskripsi, foto,
+                    ( 6371 * acos( cos( radians(?) ) * cos( radians( latitude ) )
+                    * cos( radians( longitude ) - radians(?) ) + sin( radians(?) )
+                    * sin( radians( latitude ) ) ) ) AS distance", [$lat, $lng, $lat])
+                ->orderBy('distance')
+                ->take(6)
+                ->get();
+        }
+
+        return response()->json([
+            'recommended' => $recommended,
+            'newest' => $newest,
+            'nearest' => $nearest,
+        ]);
+    }
+
+        public function show($id)
+    {
+        $resto = Restaurant::with(['jamOperasional', 'menus' => function($q) {
+            $q->where('highlight', true);
+        }])->findOrFail($id);
+
+        $jamHariIni = $resto->jamOperasional
+            ->where('hari', now()->format('l')) // ambil hari ini
+            ->first();
+
+        return response()->json([
+            'id' => $resto->id,
+            'nama' => $resto->nama,
+            'alamat' => $resto->alamat,
+            'deskripsi' => $resto->deskripsi,
+            'jam_operasional' => $jamHariIni ? [
+                'buka' => $jamHariIni->buka,
+                'tutup' => $jamHariIni->tutup,
+                'status' => $this->cekStatusBuka($jamHariIni)
+            ] : null,
+            'foto' => json_decode($resto->foto),
+            'highlight_menu' => $resto->menus->map(function($menu) {
+                return [
+                    'nama' => $menu->nama,
+                    'harga' => $menu->harga,
+                    'foto' => $menu->foto
+                ];
+            }),
+            'lokasi' => [
+                'latitude' => $resto->latitude,
+                'longitude' => $resto->longitude
+            ]
+        ]);
+    }
+
+
+    private function cekStatusBuka($jam)
+    {
+        $now = now()->format('H:i');
+        return ($now >= $jam->buka && $now <= $jam->tutup) ? 'buka' : 'tutup';
+    }
+
+     public function indexuser()
     {
         $users = User::where('peran', 'pemesan')->get();
         return UserResource::collection($users);
@@ -42,11 +123,6 @@ class CustomerController extends Controller
     }*/
 
     // GET /admin/customers/{id}
-        public function show(string $id)
-    {
-        $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
-        return new UserResource($user);
-    }
 
 
     // PUT /admin/customers/{id}
@@ -82,4 +158,22 @@ class CustomerController extends Controller
 
         return response()->json(['message' => 'Customer berhasil dihapus']);
     }
+
+ public function search(Request $request)
+    {
+        $search = $request->query('search'); // ambil keyword pencarian dari query string
+
+        $restoran = Restaurant::query()
+            ->when($search, function ($query, $search) {
+                $query->where('nama', 'like', "%{$search}%")
+                      ->orWhere('deskripsi', 'like', "%{$search}%");
+            })
+            ->get();
+
+        return response()->json([
+            'message' => 'Daftar restoran berhasil diambil',
+            'data' => $restoran
+        ]);
+    }
+
 }

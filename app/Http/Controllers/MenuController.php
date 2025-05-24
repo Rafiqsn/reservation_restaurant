@@ -26,6 +26,7 @@ class MenuController extends Controller
             'harga' => 'required|numeric',
             'status' => 'required|in:tersedia,tidak_tersedia',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'highlight' => 'nullable|boolean',
         ]);
 
         $user = Auth::user();
@@ -50,7 +51,10 @@ class MenuController extends Controller
             'deskripsi' => $request->deskripsi,
             'harga' => $request->harga,
             'status' => $request->status,
-            'foto' => $filename ? 'menu/' . $filename : null, // simpan path relatif
+            'foto' => $filename ? 'menu/' . $filename : null,
+            'highlight' => $request->boolean('highlight'),
+
+
         ]);
 
         return response()->json([
@@ -58,6 +62,7 @@ class MenuController extends Controller
             'data' => $menu
         ]);
     }
+
 
 
         public function update(Request $request, $id)
@@ -68,10 +73,12 @@ class MenuController extends Controller
             'harga' => 'required|numeric',
             'status' => 'required|in:tersedia,tidak_tersedia',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'highlight' => 'nullable|boolean'
         ]);
 
         $user = $request->user();
         $menu = Menu::where('id', $id)->where('restoran_id', $user->restoran->id)->first();
+
 
         if (!$menu) {
             return response()->json(['message' => 'Menu tidak ditemukan atau bukan milik Anda'], 404);
@@ -87,10 +94,12 @@ class MenuController extends Controller
         $menu->deskripsi = $request->deskripsi;
         $menu->harga = $request->harga;
         $menu->status = $request->status;
+        $menu->highlight = $request->boolean('highlight');
         $menu->save();
 
         return response()->json(['message' => 'Menu berhasil diperbarui', 'data' => $menu]);
     }
+
 
     public function destroy(Request $request, $id)
     {

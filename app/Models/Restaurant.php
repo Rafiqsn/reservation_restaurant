@@ -41,4 +41,9 @@ class Restaurant extends Model
         return $this->hasMany(JamOperasional::class, 'restoran_id');
     }
 
+        public function reservasi()
+    {
+        return $this->hasMany(Reservation::class,'restoran_id');
+    }
+
 }

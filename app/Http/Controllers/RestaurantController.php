@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Restaurant;
+use App\Models\JamOperasional;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Http\Resources\RestaurantResource;
@@ -12,10 +13,89 @@ use Illuminate\Support\Facades\Validator;
 
 class RestaurantController extends Controller
 {
-    public function dashboard()
+    public function dashboard(Request $request)
     {
+        $restoran = Auth::user()->restoran;
 
+        if (!$restoran) {
+            return response()->json(['message' => 'Restoran tidak ditemukan'], 404);
+        }
+
+        $totalPelanggan = User::whereHas('reservations', function ($query) use ($restoran) {
+            $query->where('restoran_id', $restoran->id);
+        })->distinct()->count();
+
+        $totalReservasi = $restoran->reservations()->count();
+        $totalDibatalkan = $restoran->reservations()->where('status', 'dibatalkan')->count();
+
+        $reservasiTerbaru = $restoran->reservations()
+            ->with('pengguna', 'kursi')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'nama' => $r->pengguna->nama ?? 'N/A',
+                    'jumlah_orang' => $r->jumlah_orang,
+                    'waktu' => date('H:i', strtotime($r->waktu)) . '-' . date('H:i', strtotime('+1 hour', strtotime($r->waktu))),
+                    'nomor_meja' => $r->kursi->nomor ?? '-',
+                ];
+            });
+
+        return response()->json([
+            'total_pelanggan' => $totalPelanggan,
+            'total_reservasi' => $totalReservasi,
+            'total_dibatalkan' => $totalDibatalkan,
+            'reservasi_terbaru' => $reservasiTerbaru,
+            'status' => $restoran->status, // 'buka' atau 'tutup'
+            'jam_operasional' => $restoran->jamOperasional, // harus sudah punya relasi
+        ]);
     }
+
+        public function updateOperasional(Request $request, $restoranId)
+    {
+        $user = Auth::user();
+        $restoran = $user->restoran;
+
+        if (!$restoran || $restoran->id !== $restoranId) {
+            return response()->json(['message' => 'Restoran tidak ditemukan atau bukan milik Anda'], 404);
+        }
+
+        $validated = $request->validate([
+            'status' => 'nullable|boolean',
+            'jam_buka' => 'nullable|date_format:H:i',
+            'jam_tutup' => 'nullable|date_format:H:i',
+        ]);
+
+
+        $jam = jamOperasional::where('restoran_id', $restoran->id)->first();
+
+        if (!$jam) {
+
+            $jam = jamOperasional::create([
+                'restoran_id' => $restoran->id,
+                'jam_buka' => $validated['jam_buka'] ?? '08:00',
+                'jam_tutup' => $validated['jam_tutup'] ?? '17:00',
+            ]);
+        } else {
+
+            $jam->update([
+                'jam_buka' => $validated['jam_buka'] ?? $jam->jam_buka,
+                'jam_tutup' => $validated['jam_tutup'] ?? $jam->jam_tutup,
+            ]);
+        }
+
+        if (isset($validated['status'])) {
+            $restoran->update([
+                'status' => $validated['status'],
+            ]);
+        }
+
+        return response()->json(['message' => 'Jam operasional dan status berhasil diperbarui.']);
+    }
+
+
+
 
     public function index()
     {

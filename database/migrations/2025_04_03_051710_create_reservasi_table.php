@@ -10,12 +10,11 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->uuid('pengguna_id');
             $table->uuid('restoran_id');
-            $table->uuid('kursi_id');
+            $table->uuid('kursi_id')->nullable(); // Ubah ini
             $table->date('tanggal');
             $table->time('waktu');
             $table->enum('status', ['menunggu', 'dikonfirmasi', 'dibatalkan']);
             $table->timestamps();
-
             $table->foreign('pengguna_id')->references('id')->on('pengguna')->onDelete('cascade');
             $table->foreign('restoran_id')->references('id')->on('restoran')->onDelete('cascade');
             $table->foreign('kursi_id')->references('id')->on('kursi')->onDelete('cascade');

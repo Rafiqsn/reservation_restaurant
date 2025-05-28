@@ -20,7 +20,7 @@ class User extends Authenticatable
     protected $keyType = 'string';
 
 
-    public function reservasi()
+        public function reservations()
     {
         return $this->hasMany(Reservation::class, 'pengguna_id');
     }

@@ -13,7 +13,6 @@ return new class extends Migration {
             $table->integer('jumlah');
             $table->decimal('subtotal', 10, 2);
             $table->timestamps();
-
             $table->foreign('reservasi_id')->references('id')->on('reservasi')->onDelete('cascade');
             $table->foreign('menu_id')->references('id')->on('menu')->onDelete('cascade');
         });

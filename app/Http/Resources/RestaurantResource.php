@@ -16,6 +16,7 @@ class RestaurantResource extends JsonResource
             'deskripsi' => $this->deskripsi,
             'status' => $this->status,
             'kontak' => $this->kontak,
+            'is_recommended' => $this->is_recommended,
             'pemilik_id' => new UserResource($this->whenLoaded('owner')),
             'jam_operasional' => OperationalHourResource::collection($this->whenLoaded('jamOperasional')),
             'meja' => TableResource::collection($this->whenLoaded('tables')),

@@ -12,7 +12,7 @@ class Reservation extends Model
     protected $keyType = 'string';
 
     protected $table = 'reservasi';
-    protected $fillable = ['pengguna_id', 'restoran_id', 'kursi_id', 'tanggal', 'waktu', 'status'];
+    protected $fillable = ['id','pengguna_id', 'restoran_id', 'kursi_id', 'tanggal', 'waktu', 'status'];
 
     public function user()
     {

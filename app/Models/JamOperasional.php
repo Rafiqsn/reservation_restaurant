@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 class JamOperasional extends Model
 {
     use HasUuids;
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $table = 'jam_operasional';
 

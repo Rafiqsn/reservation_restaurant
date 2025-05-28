@@ -59,9 +59,22 @@ class AdminController extends Controller
         'deskripsi' => 'nullable|string',
         'status' => 'required|in:buka,tutup',
         'kontak' => 'required|string|max:20',
+        'surat_halal' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        'nib' => 'required|string|max:20',
+
     ]);
 
+    $filename = null;
+
+        // Upload file
+        if ($request->hasFile('surat_halal')) {
+            $file = $request->file('surat_halal');
+            $filename = 'surat_halal' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move(public_path('surat_halal'), $filename); // Simpan ke public/menu
+        }
     DB::beginTransaction();
+
+
 
     try {
         // Buat user (penyedia)
@@ -83,6 +96,8 @@ class AdminController extends Controller
             'deskripsi' => $validated['deskripsi'] ?? null,
             'status' => 'buka',
             'kontak' => $validated['kontak'],
+            'surat_halal' => $validated['surat_halal'],
+            'nib' => $validated['nib'],
         ]);
 
         DB::commit();
@@ -114,13 +129,12 @@ class AdminController extends Controller
             'email' => $user->email,
             'no_hp' => $user->no_hp,
 
-            // Data restoran (jika ada)
             'nama_resto' => $resto?->nama,
             'lokasi' => $resto?->lokasi,
             'status' => $resto?->status,
             'kontak' => $resto?->kontak,
             'nib' => $resto?->nib,
-            'surat_halal' => $resto?->surat_halal, // URL atau path file
+            'surat_halal' => $resto?->surat_halal,
 
             'created_at' => $user->created_at->toDateTimeString(),
         ]);

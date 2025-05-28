@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('notifikasi', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('pengguna_id');
-            $table->uuid('reservasi_id')->nullable(); // Optional jika berkaitan
+            $table->uuid('reservasi_id'); // Optional jika berkaitan
             $table->text('pesan');
             $table->enum('status', ['belum_dibaca', 'dibaca'])->default('belum_dibaca');
             $table->timestamps();

@@ -19,6 +19,10 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('
 
 Route::get('/landing', [LandingPageController::class, 'index']);
 Route::get('/landing/resto', [LandingPageController::class, 'index']);
+Route::get('/restoran/{id}', [CustomerController::class, 'show']);
+Route::get('/restoran', [CustomerController::class, 'search']);
+Route::get('/restoran', [CustomerController::class, 'index']);
+
 // Rute yang butuh token login
 
 
@@ -42,6 +46,13 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     })->middleware(['role:admin'])->name('admin.page');
 
+    Route::get('/pemesan', function () {
+        return response()->json([
+            'message' => 'Halaman untuk pemesan',
+            'status' => 'success'
+        ]);
+    })->middleware(['role:pemesan'])->name('pemesan.page');
+
 
 
 
@@ -49,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         //dashboard
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
+
         // users
        Route::get('/users', [AdminController::class, 'index']);
         Route::post('/users', [AdminController::class, 'store']);
@@ -80,14 +92,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['role:penyedia'])->prefix('penyedia')->group(function () {
         //dashboard
         Route::get('/dashboard', [RestaurantController::class, 'dashboard']);
-        //manajemen meja
+        Route::put('/dashboard/{id}', [RestaurantController::class, 'updateOperasional']);
 
-        Route::prefix('kursi')->group(function () {
-            Route::get('/{id}', [KursiController::class, 'index']);
-            Route::post('/', [KursiController::class, 'store']);
-            Route::post('/upload-denah/{id}', [KursiController::class, 'uploadDenah']);
-            Route::delete('/{id}', [KursiController::class, 'destroy']);
-        });
+        //manajemen meja
+        Route::get('/kursi', [KursiController::class, 'index']);
+        Route::post('/kursi', [KursiController::class, 'store']);
+        Route::post('/kursi/upload-denah/{id}', [KursiController::class, 'uploadDenah']);
+        Route::delete('/kursi/{id}', [KursiController::class, 'destroy']);
 
         //kelola reservasi
         Route::get('/reservasi', [ReservasiController::class, 'index']);
@@ -107,13 +118,11 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
 
-
-   //pemesan Field
-   Route::middleware(['role:pemesan'])->prefix('pemesan')->group(function () {
+    Route::middleware(['role:pemesan'])->prefix('pemesan')->group(function () {
+        Route::post('/reservasi/cek-ketersediaan', [ReservasiController::class, 'cekKetersediaan']);
+        Route::get('/reservasi/menu', [ReservasiController::class, 'getMenu']);
+        Route::post('/reservasi/menu', [ReservasiController::class, 'tampilkanMenu']);
 
     });
-
-
-
 });
 

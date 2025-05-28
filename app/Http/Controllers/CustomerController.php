@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use App\Http\Resources\UserResource;
+use App\Models\Restaurant;
 
 class CustomerController extends Controller
 {
@@ -42,11 +43,13 @@ class CustomerController extends Controller
     }*/
 
     // GET /admin/customers/{id}
-        public function show(string $id)
-    {
-        $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
-        return new UserResource($user);
-    }
+       public function show(string $id)
+{
+    $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
+
+    return new UserResource($user);
+}
+
 
 
     // PUT /admin/customers/{id}

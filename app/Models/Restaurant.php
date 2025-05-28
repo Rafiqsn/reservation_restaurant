@@ -17,7 +17,8 @@ class Restaurant extends Model
         'lokasi',
         'deskripsi',
         'status',
-        'kontak'
+        'kontak',
+        'is_recommended'
     ];
     public $incrementing = false;
     protected $keyType = 'string';
@@ -38,7 +39,13 @@ class Restaurant extends Model
 
     public function jamOperasional()
     {
-        return $this->hasMany(JamOperasional::class, 'restoran_id');
+        return $this->hasOne(JamOperasional::class, 'restoran_id');
     }
+
+        public function reservations()
+    {
+        return $this->hasMany(Reservation::class, 'restoran_id');
+    }
+
 
 }

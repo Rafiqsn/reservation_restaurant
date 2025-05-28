@@ -18,14 +18,15 @@ class MenuController extends Controller
         return response()->json($menus);
     }
 
-        public function store(Request $request)
+            public function store(Request $request)
     {
         $request->validate([
             'nama' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'harga' => 'required|numeric',
-            'status' => 'required|in:tersedia,tidak_tersedia',
+            'status' => 'nullable|in:tersedia,tidak_tersedia',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'highlight' => 'nullable|boolean',
         ]);
 
         $user = Auth::user();
@@ -34,13 +35,13 @@ class MenuController extends Controller
             return response()->json(['message' => 'Restoran tidak ditemukan untuk user ini.'], 404);
         }
 
-        $filename = null;
+       $filename = null;
 
         // Upload file
         if ($request->hasFile('foto')) {
             $file = $request->file('foto');
-            $filename = 'menu_' . time() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('menu'), $filename); // Simpan ke public/menu
+            $filename = 'foto' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move(public_path('foto'), $filename); // Simpan ke public/menu
         }
 
         $menu = Menu::create([
@@ -49,8 +50,9 @@ class MenuController extends Controller
             'nama' => $request->nama,
             'deskripsi' => $request->deskripsi,
             'harga' => $request->harga,
-            'status' => $request->status,
-            'foto' => $filename ? 'menu/' . $filename : null, // simpan path relatif
+            'status' => $request->status ?? 'tersedia',
+            'foto' => $filename ? 'menu/' . $filename : null,
+            'highlight' => $request->highlight ?? false,
         ]);
 
         return response()->json([
@@ -58,6 +60,7 @@ class MenuController extends Controller
             'data' => $menu
         ]);
     }
+
 
 
         public function update(Request $request, $id)
@@ -68,6 +71,8 @@ class MenuController extends Controller
             'harga' => 'required|numeric',
             'status' => 'required|in:tersedia,tidak_tersedia',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'highlight' => 'nullable|boolean',
+
         ]);
 
         $user = $request->user();
@@ -87,6 +92,9 @@ class MenuController extends Controller
         $menu->deskripsi = $request->deskripsi;
         $menu->harga = $request->harga;
         $menu->status = $request->status;
+         if ($request->has('highlight')) {
+        $menu->highlight = $request->highlight;
+    }
         $menu->save();
 
         return response()->json(['message' => 'Menu berhasil diperbarui', 'data' => $menu]);

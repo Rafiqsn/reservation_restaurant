@@ -9,38 +9,66 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use App\Http\Resources\UserResource;
 use App\Models\Restaurant;
+use Illuminate\Support\Facades\Auth;
+
 
 class CustomerController extends Controller
 {
     // GET /admin/customers
-    public function index()
+    public function CustShow()
     {
-        $users = User::where('peran', 'pemesan')->get();
-        return UserResource::collection($users);
+        $user = Auth::user(); // user yang login
+
+        // kalau kamu mau pastikan perannya pemesan
+        if ($user && $user->peran === 'pemesan') {
+            return new UserResource($user);
+        }
+
+        // kalau bukan pemesan, bisa return error atau data kosong
+        return response()->json([
+            'status' => 'error',
+            'message' => 'User bukan pemesan atau belum login'
+        ], 403);
     }
 
-    // POST /admin/customers
-    /*
-    public function store(Request $request)
+
+        public function updateProfile(Request $request, $id)
     {
-        $validated = $request->validate([
+        $user = User::where('peran', 'pemesan')->findOrFail($id);
+
+        $request->validate([
             'nama' => 'required|string|max:255',
-            'email' => 'required|email|unique:pengguna,email',
-            'kata_sandi' => 'required|string|min:6',
-            'no_hp' => 'required|string|max:20',
+            'email' => 'required|email|unique:users,email',
+            'kata_sandi' => 'nullable|string',
+            'kata_sandi_baru' => 'nullable|string|min:8|confirmed',
         ]);
 
-        $user = User::create([
-            'id' => Str::uuid(),
-            'nama' => $validated['nama'],
-            'email' => $validated['email'],
-            'kata_sandi' => Hash::make($validated['kata_sandi']),
-            'no_hp' => $validated['no_hp'],
-            'peran' => 'customer', // hanya bisa membuat customer
-        ]);
+        $user->nama = $request->nama;
+        $user->email = $request->email;
 
-        return new UserResource($user);
-    }*/
+        if ($request->filled('kata_sandi') && $request->filled('kata_sandi_baru')) {
+            if (Hash::check($request->kata_sandi, $user->password)) {
+                $user->password = Hash::make($request->kata_sandi_baru);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Password lama salah, password tidak diubah.'
+                ], 400);
+            }
+        }
+
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profil berhasil diperbarui.',
+            'data' => [
+                'nama' => $user->nama,
+                'email' => $user->email,
+            ]
+        ]);
+    }
+
 
     // GET /admin/customers/{id}
        public function show(string $id)

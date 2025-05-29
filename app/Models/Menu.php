@@ -12,7 +12,7 @@ class Menu extends Model
     protected $keyType = 'string';
 
     protected $table = 'menu';
-    protected $fillable = ['id','restoran_id', 'nama', 'deskripsi', 'harga', 'status','foto','highlight'];
+    protected $fillable = ['id','restoran_id','jenis', 'nama', 'deskripsi', 'harga', 'status','foto','highlight'];
 
     public function restaurant()
     {

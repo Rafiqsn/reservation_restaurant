@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+
 class Reservation extends Model
 {
     use HasFactory;
@@ -12,7 +13,7 @@ class Reservation extends Model
     protected $keyType = 'string';
 
     protected $table = 'reservasi';
-    protected $fillable = ['id','pengguna_id', 'restoran_id', 'kursi_id', 'tanggal', 'waktu', 'status'];
+    protected $fillable = ['id','pengguna_id', 'restoran_id', 'kursi_id', 'tanggal', 'waktu','jumlah_orang','catatan', 'status','nomor_reservasi','total_harga'];
 
     public function user()
     {
@@ -37,5 +38,14 @@ class Reservation extends Model
     public function invoice()
     {
         return $this->hasOne(Invoice::class, 'reservasi_id');
+    }
+
+        public function menu()
+    {
+        return $this->hasMany(ReservationMenu::class, 'reservasi_id');
+    }
+        public function kursi()
+    {
+        return $this->belongsTo(Table::class);
     }
 }

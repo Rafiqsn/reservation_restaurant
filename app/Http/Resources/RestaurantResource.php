@@ -16,11 +16,24 @@ class RestaurantResource extends JsonResource
             'deskripsi' => $this->deskripsi,
             'status' => $this->status,
             'kontak' => $this->kontak,
+            'nib' => $this->nib,
+            'surat_halal' => $this->surat_halal,
+            'latitude ' => $this->latitude ,
+            'longitude' => $this->longitude,
             'is_recommended' => $this->is_recommended,
-            'pemilik_id' => new UserResource($this->whenLoaded('owner')),
-            'jam_operasional' => OperationalHourResource::collection($this->whenLoaded('jamOperasional')),
-            'meja' => TableResource::collection($this->whenLoaded('tables')),
-            'menu' => MenuResource::collection($this->whenLoaded('menus')),
+                   // Safe loading for owner
+            'pemilik' => $this->whenLoaded('owner', function () {
+                return new UserResource($this->owner);
+            }),
+            'jam_operasional' => $this->whenLoaded('jamOperasional', function () {
+                return new OperationalHourResource($this->jamOperasional);
+            }),
+            'meja' => $this->whenLoaded('tables', function () {
+                return TableResource::collection($this->tables);
+            }),
+            'menu' => $this->whenLoaded('menus', function () {
+                return MenuResource::collection($this->menus);
+            }),
             'created_at' => $this->created_at,
         ];
     }

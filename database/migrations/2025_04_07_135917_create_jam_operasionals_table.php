@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('jam_operasional', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('restoran_id');
-            $table->string('hari'); // Senin, Selasa, dst.
             $table->time('jam_buka');
             $table->time('jam_tutup');
             $table->timestamps();

@@ -14,6 +14,10 @@ return new class extends Migration {
             $table->date('tanggal');
             $table->time('waktu');
             $table->enum('status', ['menunggu', 'dikonfirmasi', 'dibatalkan']);
+            $table->integer('jumlah_orang');
+            $table->text('catatan')->nullable();
+            $table->string('nomor_reservasi')->nullable();
+            $table->decimal('total_harga', 10, 2);
             $table->timestamps();
             $table->foreign('pengguna_id')->references('id')->on('pengguna')->onDelete('cascade');
             $table->foreign('restoran_id')->references('id')->on('restoran')->onDelete('cascade');

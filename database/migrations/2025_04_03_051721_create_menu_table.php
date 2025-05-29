@@ -11,6 +11,7 @@ return new class extends Migration {
         $table->uuid('restoran_id');
         $table->string('nama');
         $table->text('deskripsi')->nullable();
+        $table->enum('jenis', ['makanan', 'minuman']);
         $table->decimal('harga', 10, 2);
         $table->longText('foto')->nullable();
         $table->enum('status', ['tersedia', 'tidak_tersedia'])->default('tersedia');

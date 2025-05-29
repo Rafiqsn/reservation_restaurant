@@ -10,6 +10,7 @@ use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\KursiController;
 use App\Http\Controllers\ReservasiController;
 use App\Http\Controllers\MenuController;
+
 // Rute publik (tanpa autentikasi)
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/register', [AuthController::class, 'register'])->name('register');
@@ -18,14 +19,15 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('
 
 
 Route::get('/landing', [LandingPageController::class, 'index']);
-Route::get('/landing/resto', [LandingPageController::class, 'index']);
-Route::get('/restoran/{id}', [CustomerController::class, 'show']);
-Route::get('/restoran', [CustomerController::class, 'search']);
-Route::get('/restoran', [CustomerController::class, 'index']);
+Route::get('/restoran/{id}', [LandingPageController::class, 'show']);
+Route::get('/restoran', [LandingPageController::class, 'search']);
+
+Route::get('/restoran/rekomendasi', [LandingPageController::class, 'rekomendasi']);
+Route::get('/restoran/terdekat', [LandingPageController::class, 'terdekat']);
+
+
 
 // Rute yang butuh token login
-
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -74,7 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/customers/{id}', [CustomerController::class, 'destroy']);
 
         //web
-        Route::put('/restoran/{id}/rekomendasi', [AdminController::class, 'toggleRecommendation']);
+        Route::put('/restoran/rekomendasi/{id}', [AdminController::class, 'toggleRecommendation']);
         Route::get('/restoran', [AdminController::class, 'adminIndex']);
 
         //edit profile
@@ -82,11 +84,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/edit/{id}', [AdminController::class, 'adminProfileUpdate']);
 
      });
-
-
-
-
-
 
     //Penyedia Restoran field
     Route::middleware(['role:penyedia'])->prefix('penyedia')->group(function () {
@@ -101,8 +98,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/kursi/{id}', [KursiController::class, 'destroy']);
 
         //kelola reservasi
-        Route::get('/reservasi', [ReservasiController::class, 'index']);
-        Route::put('/reservasi/{id}/status', [ReservasiController::class, 'updateStatus']);
+        Route::get('/reservasi', [ReservasiController::class, 'daftarReservasi']);
+        Route::get('/reservasi/konfirmasi/{reservasi_id}', [ReservasiController::class, 'GetNotaRiwayat']);
+        Route::put('/reservasi/konfirmasi/{reservasi_id}', [ReservasiController::class, 'konfirmasi']);
+        Route::put('/reservasi/batalkan/{reservasi_id}', [ReservasiController::class, 'batalkan']);
 
         //kelola menu
         Route::get('/menu', [MenuController::class, 'index']);
@@ -119,9 +118,30 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::middleware(['role:pemesan'])->prefix('pemesan')->group(function () {
+    //Alur Pesan
+        //isi format
         Route::post('/reservasi/cek-ketersediaan', [ReservasiController::class, 'cekKetersediaan']);
-        Route::get('/reservasi/menu', [ReservasiController::class, 'getMenu']);
-        Route::post('/reservasi/menu', [ReservasiController::class, 'tampilkanMenu']);
+        //Pilih Menu
+        Route::get('/reservasi/pilih-menu', [ReservasiController::class, 'GetMenu']);
+        Route::post('/reservasi/pilih-menu', [ReservasiController::class, 'PilihMenu']);
+        //Pilih Kursi
+        Route::get('/reservasi/pilih-kursi', [ReservasiController::class, 'GetKursi']);
+        Route::post('/reservasi/pilih-kursi', [ReservasiController::class, 'PilihKursi']);
+        //Get nota
+        Route::get('/reservasi/konfirmasi-pesanan/{id}', [ReservasiController::class, 'GetNota']);
+        Route::post('/reservasi/konfirmasi-pesanan', [ReservasiController::class, 'tambahCatatan']);
+
+    //Profil Setting
+        //Profil Page
+        Route::get('/profil', [CustomerController::class, 'CustShow']);
+        Route::put('/profil/{id}', [CustomerController::class, 'updateProfile']);
+        //Pesenan saya
+        Route::get('/reservasi/pesanan-saya', [ReservasiController::class, 'PesananSaya']);
+        //Riwayat Pesanan
+        Route::get('/reservasi/riwayatpesanan', [ReservasiController::class, 'riwayatpesanan']);
+            // Lihat nota Pesanan
+         Route::get('/reservasi/lihat-nota/{reservasi_id}', [ReservasiController::class, 'GetNotaRiwayat']);
+
 
     });
 });

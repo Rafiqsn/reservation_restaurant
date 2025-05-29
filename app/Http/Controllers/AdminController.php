@@ -59,8 +59,9 @@ class AdminController extends Controller
         'deskripsi' => 'nullable|string',
         'status' => 'required|in:buka,tutup',
         'kontak' => 'required|string|max:20',
-        'surat_halal' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         'nib' => 'required|string|max:20',
+        'surat_halal' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+
 
     ]);
 
@@ -96,8 +97,10 @@ class AdminController extends Controller
             'deskripsi' => $validated['deskripsi'] ?? null,
             'status' => 'buka',
             'kontak' => $validated['kontak'],
-            'surat_halal' => $validated['surat_halal'],
             'nib' => $validated['nib'],
+            'surat_halal' => $filename ,
+
+
         ]);
 
         DB::commit();

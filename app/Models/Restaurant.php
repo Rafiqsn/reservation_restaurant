@@ -18,10 +18,15 @@ class Restaurant extends Model
         'deskripsi',
         'status',
         'kontak',
-        'is_recommended'
+        'nib',
+        'surat_halal',
+        'is_recommended',
+        'latitude',
+        'longitude'
     ];
     public $incrementing = false;
     protected $keyType = 'string';
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'pemilik_id');

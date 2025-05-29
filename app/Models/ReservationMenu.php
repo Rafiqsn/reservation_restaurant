@@ -11,7 +11,8 @@ class ReservationMenu extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $table = 'reservasi_menu';
-    protected $fillable = ['reservasi_id', 'menu_id', 'jumlah', 'subtotal'];
+
+    protected $fillable = ['id','reservasi_id', 'menu_id', 'jumlah', 'subtotal'];
 
     public function reservation()
     {

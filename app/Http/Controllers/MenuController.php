@@ -24,6 +24,7 @@ class MenuController extends Controller
             'nama' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'harga' => 'required|numeric',
+            'jenis' => 'required|in:makanan,minuman',
             'status' => 'nullable|in:tersedia,tidak_tersedia',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'highlight' => 'nullable|boolean',
@@ -50,6 +51,7 @@ class MenuController extends Controller
             'nama' => $request->nama,
             'deskripsi' => $request->deskripsi,
             'harga' => $request->harga,
+            'jenis' =>  $request->jenis,
             'status' => $request->status ?? 'tersedia',
             'foto' => $filename ? 'menu/' . $filename : null,
             'highlight' => $request->highlight ?? false,
@@ -69,6 +71,7 @@ class MenuController extends Controller
             'nama' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'harga' => 'required|numeric',
+            'jenis' => 'required|in:makanan,minuman',
             'status' => 'required|in:tersedia,tidak_tersedia',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'highlight' => 'nullable|boolean',
@@ -91,6 +94,7 @@ class MenuController extends Controller
         $menu->nama = $request->nama;
         $menu->deskripsi = $request->deskripsi;
         $menu->harga = $request->harga;
+        $menu->jenis = $request->jenis;
         $menu->status = $request->status;
          if ($request->has('highlight')) {
         $menu->highlight = $request->highlight;

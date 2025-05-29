@@ -13,9 +13,11 @@ class MenuResource extends JsonResource
         return [
             'nama' => $this->nama,
             'deskripsi' => $this->deskripsi,
+            'jenis' => $this->jenis,
             'harga' => $this->harga,
             'foto' => $this->foto,
             'status' => $this->status,
+            'highlight' => $this->highlight,
         ];
     }
 }

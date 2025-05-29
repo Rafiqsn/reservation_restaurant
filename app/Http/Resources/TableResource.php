@@ -15,6 +15,7 @@ class TableResource extends JsonResource
             'kapasitas' => $this->kapasitas,
             'posisi' => $this->posisi,
             'status' => $this->status,
+            'denah_meja' => $this->denah_meja,
         ];
     }
 }

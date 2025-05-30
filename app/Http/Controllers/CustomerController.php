@@ -36,36 +36,38 @@ class CustomerController extends Controller
     {
         $user = User::where('peran', 'pemesan')->findOrFail($id);
 
-        $request->validate([
-            'nama' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+        $validated = $request->validate([
+            'nama' => 'sometimes|string|max:255',
+            'email' => [
+                'sometimes',
+                'email',
+                Rule::unique('pengguna')->ignore($user->id),
+            ],
+            'no_hp' => 'sometimes|string|max:20',
             'kata_sandi' => 'nullable|string',
-            'kata_sandi_baru' => 'nullable|string|min:8|confirmed',
+            'kata_sandi_baru' => 'nullable|string|min:8',
         ]);
 
-        $user->nama = $request->nama;
-        $user->email = $request->email;
+        if (isset($validated['nama'])) $user->nama = $validated['nama'];
+        if (isset($validated['email'])) $user->email = $validated['email'];
+        if (isset($validated['no_hp'])) $user->no_hp = $validated['no_hp'];
 
-        if ($request->filled('kata_sandi') && $request->filled('kata_sandi_baru')) {
-            if (Hash::check($request->kata_sandi, $user->password)) {
-                $user->password = Hash::make($request->kata_sandi_baru);
-            } else {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Password lama salah, password tidak diubah.'
-                ], 400);
+        if (!empty($validated['kata_sandi_baru'])) {
+            if (!Hash::check($validated['kata_sandi'], $user->kata_sandi)) {
+                return response()->json(['message' => 'Password lama salah'], 422);
             }
+            $user->kata_sandi = Hash::make($validated['kata_sandi_baru']);
         }
 
         $user->save();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Profil berhasil diperbarui.',
-            'data' => [
+         return response()->json([
+            'message' => 'Profil berhasil diperbarui',
+            'user' => [
                 'nama' => $user->nama,
                 'email' => $user->email,
-            ]
+                'no_hp' => $user->no_hp,
+            ],
         ]);
     }
 

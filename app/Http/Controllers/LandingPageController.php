@@ -50,37 +50,38 @@ class LandingPageController extends Controller
         $restoran = Restaurant::with([
             'owner',
             'jamOperasional',
-            'menus' => function ($query) {
-                $query->where('highlight', true)
-                    ->limit(3); // batasi hanya 3 data
-            }
+            'menus' => fn($q) => $q->where('highlight', true)->limit(3),
+            'ulasan.reservasi.user'
         ])->findOrFail($id);
 
         return new RestaurantResource($restoran);
     }
 
-        public function search(Request $request)
+
+
+            public function search(Request $request)
     {
         $search = $request->query('search');
 
-        $query = Restaurant::query();
+        $query = Restaurant::with('ulasan'); // eager load ulasan untuk avg rating
 
         if ($search) {
             $query->where('nama', 'like', '%' . $search . '%');
         }
 
-        // Bisa tambahkan relasi jika ada, misalnya 'pemilik' jika ada relasi di model
-
-        $restoran = $query->paginate(10); // pagination 10 per page
+        $restoran = $query->paginate(10);
 
         return RestaurantResource::collection($restoran);
     }
 
 
-     public function rekomendasi()
+
+        public function rekomendasi()
     {
-         $recommended = Restaurant::select('nama', 'deskripsi', 'foto')
+        $recommended = Restaurant::select('restoran.id', 'nama', 'deskripsi', 'foto')
+            ->leftJoin(DB::raw('(SELECT restoran_id, AVG(rating) as rata_rata_rating FROM ulasan GROUP BY restoran_id) as u'), 'restoran.id', '=', 'u.restoran_id')
             ->where('is_recommended', true)
+            ->addSelect('u.rata_rata_rating')
             ->take(6)
             ->get();
 

@@ -48,4 +48,10 @@ class Reservation extends Model
     {
         return $this->belongsTo(Table::class);
     }
+
+        public function ulasan()
+    {
+        return $this->hasOne(Ulasan::class, 'reservasi_id');
+    }
+
 }

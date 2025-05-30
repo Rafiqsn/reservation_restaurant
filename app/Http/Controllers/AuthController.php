@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User; 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -10,18 +10,32 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Facades\Log;
 
 
 class AuthController extends Controller
 {
+
     public function register(Request $request)
     {
-        $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'email' => 'required|email|unique:pengguna,email',
-            'kata_sandi' => 'required|string|min:6',
-            'no_hp' => 'required|string|max:20',
-        ]);
+        try {
+            $validated = $request->validate([
+                'nama' => 'required|string|max:255',
+                'email' => 'required|email|unique:pengguna,email',
+                'kata_sandi' => 'required|string|min:6',
+                'no_hp' => 'required|string|max:20',
+            ]);
+        } catch (ValidationException $e) {
+            Log::debug('Register gagal: validasi error', [
+                'errors' => $e->errors(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors(),
+            ], 422);
+        }
 
         $user = User::create([
             'id' => Str::uuid()->toString(),
@@ -41,9 +55,12 @@ class AuthController extends Controller
         ]);
     }
 
+
     // LOGIN
-    public function login(Request $request)
-    {
+
+public function login(Request $request)
+{
+    try {
         $request->validate([
             'email' => 'required|email',
             'kata_sandi' => 'required'
@@ -52,6 +69,10 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->kata_sandi, $user->kata_sandi)) {
+            Log::debug('Login gagal: email atau password salah', [
+                'email_input' => $request->email,
+                'user_found' => $user ? true : false,
+            ]);
             throw ValidationException::withMessages([
                 'email' => ['Email atau kata sandi salah.'],
             ]);
@@ -64,7 +85,18 @@ class AuthController extends Controller
             'token' => $token,
             'user' => $user
         ]);
+    } catch (ValidationException $e) {
+        return response()->json([
+            'message' => 'Login gagal',
+            'errors' => $e->errors(),
+        ], 422);
+    } catch (\Exception $e) {
+        Log::error('Error login: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Terjadi kesalahan saat login',
+        ], 500);
     }
+}
 
     // INFO USER
     public function me(Request $request)

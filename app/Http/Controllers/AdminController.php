@@ -279,7 +279,7 @@ class AdminController extends Controller
         return response()->json($restaurants);
     }
 
-    
+
     public function adminProfileShow($id)
     {
         $user = User::where('peran', 'admin')->findOrFail($id);
@@ -309,7 +309,7 @@ class AdminController extends Controller
             ],
             'no_hp' => 'sometimes|string|max:20',
             'kata_sandi' => 'nullable|string',
-            'kata_sandi_baru' => 'nullable|string|min:8|confirmed',
+            'kata_sandi_baru' => 'nullable|string|min:8',
         ]);
 
 

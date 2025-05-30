@@ -10,6 +10,7 @@ use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\KursiController;
 use App\Http\Controllers\ReservasiController;
 use App\Http\Controllers\MenuController;
+use App\Http\Controllers\UlasanController;
 
 // Rute publik (tanpa autentikasi)
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -80,8 +81,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/restoran', [AdminController::class, 'adminIndex']);
 
         //edit profile
-        Route::get('/edit/{id}', [AdminController::class, 'adminProfileShow']);
-        Route::put('/edit/{id}', [AdminController::class, 'adminProfileUpdate']);
+        Route::get('/profile/edit/{id}', [AdminController::class, 'adminProfileShow']);
+        Route::put('/profile/edit/{id}', [AdminController::class, 'adminProfileUpdate']);
 
      });
 
@@ -110,7 +111,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/menu/{id}', [MenuController::class, 'destroy']);
 
         //lihat ulasan
-        Route::get('/ulasan', [RestaurantController::class, 'ulasan']);
+        // routes/api.php
+        Route::get('/restoran/ulasan/{id}', [UlasanController::class, 'lihatUlasanRestoran']);
+
         //pengaturan
         Route::get('/restoran', [RestaurantController::class, 'showuser']);
         Route::put('/restoran', [RestaurantController::class, 'updateuser']);
@@ -141,6 +144,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reservasi/riwayatpesanan', [ReservasiController::class, 'riwayatpesanan']);
             // Lihat nota Pesanan
          Route::get('/reservasi/lihat-nota/{reservasi_id}', [ReservasiController::class, 'GetNotaRiwayat']);
+            //berikan penilaian
+        Route::post('/reservasi/lihat-nota/ulasan', [UlasanController::class, 'store']);
+
 
 
     });

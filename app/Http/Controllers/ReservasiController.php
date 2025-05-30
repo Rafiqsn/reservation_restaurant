@@ -237,7 +237,7 @@ class ReservasiController extends Controller
     }
 
 
-            public function GetKursi(Request $request)
+    public function GetKursi(Request $request)
     {
         $request->validate([
             'reservasi_id' => 'required|uuid|exists:reservasi,id',
@@ -245,16 +245,25 @@ class ReservasiController extends Controller
 
         $reservasi = Reservation::with('restaurant')->findOrFail($request->reservasi_id);
 
+        $waktuMulai = Carbon::parse($reservasi->waktu);
+        $waktuSelesai = (clone $waktuMulai)->addHours(2);
+
         $semuaKursi = Table::where('restoran_id', $reservasi->restoran_id)->get();
 
+        // Ambil kursi yang bentrok dalam rentang 2 jam (kecuali reservasi ini sendiri)
         $kursiTerpakai = Reservation::where('restoran_id', $reservasi->restoran_id)
             ->where('tanggal', $reservasi->tanggal)
-            ->where('waktu', $reservasi->waktu)
             ->where('id', '!=', $reservasi->id)
+            ->where(function ($query) use ($waktuMulai, $waktuSelesai) {
+                $query->where(function ($q) use ($waktuMulai, $waktuSelesai) {
+                    $q->whereTime('waktu', '<', $waktuSelesai->format('H:i'))
+                    ->whereRaw("ADDTIME(waktu, '2:00') > ?", [$waktuMulai->format('H:i')]);
+                });
+            })
             ->pluck('kursi_id')
             ->toArray();
 
-        $siapdipakai = $semuaKursi->map(function ($kursi) use ($kursiTerpakai, $reservasi) {
+        $siapdipakai = $semuaKursi->map(function ($kursi) use ($kursiTerpakai) {
             return [
                 'id' => $kursi->id,
                 'nomor_kursi' => $kursi->nomor_kursi,
@@ -262,7 +271,6 @@ class ReservasiController extends Controller
                 'tersedia' => !in_array($kursi->id, $kursiTerpakai),
             ];
         });
-
 
         return response()->json([
             'status' => 'success',
@@ -276,8 +284,7 @@ class ReservasiController extends Controller
 
 
 
-
-        public function PilihKursi(Request $request)
+    public function PilihKursi(Request $request)
     {
         $request->validate([
             'reservasi_id' => 'required|uuid|exists:reservasi,id',
@@ -286,19 +293,30 @@ class ReservasiController extends Controller
 
         $reservasi = Reservation::findOrFail($request->reservasi_id);
 
+        // Hitung waktu mulai dan selesai (durasi 2 jam)
+        $waktuMulai = Carbon::parse($reservasi->waktu);
+        $waktuSelesai = (clone $waktuMulai)->addHours(2);
+
+        // Cek apakah kursi sudah dipakai oleh reservasi lain dalam rentang waktu 2 jam
         $sudahDipakai = Reservation::where('restoran_id', $reservasi->restoran_id)
             ->where('tanggal', $reservasi->tanggal)
-            ->where('waktu', $reservasi->waktu)
             ->where('kursi_id', $request->kursi_id)
             ->where('id', '!=', $reservasi->id)
+            ->where(function ($query) use ($waktuMulai, $waktuSelesai) {
+                $query->where(function ($q) use ($waktuMulai, $waktuSelesai) {
+                    $q->whereTime('waktu', '<', $waktuSelesai->format('H:i'))
+                    ->whereRaw("ADDTIME(waktu, '2:00') > ?", [$waktuMulai->format('H:i')]);
+                });
+            })
             ->exists();
 
         if ($sudahDipakai) {
             return response()->json([
-                'message' => 'Kursi sudah digunakan di waktu tersebut.'
+                'message' => 'Kursi sudah digunakan dalam waktu 2 jam tersebut.'
             ], 422);
         }
 
+        // Jika tidak bentrok, simpan kursi ke dalam reservasi
         $reservasi->kursi_id = $request->kursi_id;
         $reservasi->save();
 
@@ -307,6 +325,7 @@ class ReservasiController extends Controller
             'data' => $reservasi->load('kursi')
         ]);
     }
+
 
 
 

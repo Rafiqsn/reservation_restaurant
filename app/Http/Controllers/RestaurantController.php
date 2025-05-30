@@ -29,7 +29,7 @@ class RestaurantController extends Controller
         $totalDibatalkan = $restoran->reservations()->where('status', 'dibatalkan')->count();
 
         $reservasiTerbaru = $restoran->reservations()
-            ->with('pengguna', 'kursi')
+            ->with('user', 'kursi')
             ->latest()
             ->take(5)
             ->get()
@@ -173,7 +173,7 @@ class RestaurantController extends Controller
             'lokasi' => $user->restoran->lokasi ?? null,
             'deskripsi' => $user->restoran->deskripsi ?? null,
             'surat_halal' => $user->restoran->surat_halal ?? null,
-            'nomor_induk_berusaha' => $user->restoran->nomor_induk_berusaha ?? null,
+            'nib' => $user->restoran->nib ?? null,
         ];
 
         return response()->json($data);
@@ -192,9 +192,9 @@ class RestaurantController extends Controller
             'nama_restoran' => 'sometimes|required|string|max:255',
             'lokasi' => 'nullable|string',
             'deskripsi' => 'nullable|string',
-            'surat_halal' => 'nullable|image|mimes:jpeg,png,jpg|max:255',
-            'nib' => 'nullable|string|max:255',
+            'surat_halal' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'nib' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -208,33 +208,43 @@ class RestaurantController extends Controller
         $user->nama = $request->nama;
         $user->email = $request->email;
         $user->no_hp = $request->no_hp;
-
-        // Upload foto jika ada
-        if ($request->hasFile('foto')) {
-            $file = $request->file('foto');
-            $filename = time() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('uploads/foto'), $filename);
-
-            $user->foto = 'uploads/foto/' . $filename;
-        }
-
         $user->save();
 
         // Update restoran
         if ($user->restoran) {
-            $user->restoran->nama = $request->nama_restoran;
-            $user->restoran->lokasi = $request->lokasi;
-            $user->restoran->deskripsi = $request->deskripsi;
-            $user->restoran->surat_halal = $request->surat_halal;
-            $user->restoran->nib = $request->nib;
-            $user->restoran->save();
+            $restoran = $user->restoran;
+
+            $restoran->nama = $request->nama_restoran;
+            $restoran->lokasi = $request->lokasi;
+            $restoran->deskripsi = $request->deskripsi;
+            $restoran->nib = $request->nib;
+
+            // Upload foto restoran jika ada
+            if ($request->hasFile('foto')) {
+                $file = $request->file('foto');
+                $filename = time() . '_foto.' . $file->getClientOriginalExtension();
+                $file->move(public_path('uploads/foto'), $filename);
+
+                $restoran->foto = 'uploads/foto/' . $filename;
+            }
+
+            // Upload surat halal jika ada
+            if ($request->hasFile('surat_halal')) {
+                $file = $request->file('surat_halal');
+                $filename = time() . '_halal.' . $file->getClientOriginalExtension();
+                $file->move(public_path('uploads/surat_halal'), $filename);
+
+                $restoran->surat_halal = 'uploads/surat_halal/' . $filename;
+            }
+
+            $restoran->save();
         }
 
         return response()->json([
             'message' => 'Pengaturan berhasil diperbarui',
             'user' => $user,
-            'restoran' => $user->restoran
         ]);
     }
+
 
 }

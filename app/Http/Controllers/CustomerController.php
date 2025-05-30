@@ -70,13 +70,20 @@ class CustomerController extends Controller
     }
 
 
-    // GET /admin/customers/{id}
-       public function show(string $id)
-{
-    $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
 
-    return new UserResource($user);
-}
+        public function index()
+    {
+        $users = User::where('peran', 'pemesan')->get();
+
+        return UserResource::collection($users);
+    }
+        // GET /admin/customers/{id}
+        public function show(string $id)
+    {
+        $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
+
+        return new UserResource($user);
+    }
 
 
 

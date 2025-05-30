@@ -272,13 +272,14 @@ class AdminController extends Controller
 
     public function adminIndex()
     {
-        $restaurants = Restaurant::select('id', 'nama', 'deskripsi', 'lokasi as alamat', 'foto', 'is_recommended as sematkan')
+        $restaurants = Restaurant::select('id', 'nama', 'deskripsi', 'lokasi', 'foto', 'is_recommended')
                         ->orderBy('created_at', 'desc')
                         ->paginate(10); // bisa pakai pagination
 
         return response()->json($restaurants);
     }
 
+    
     public function adminProfileShow($id)
     {
         $user = User::where('peran', 'admin')->findOrFail($id);

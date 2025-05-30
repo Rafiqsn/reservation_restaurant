@@ -22,8 +22,8 @@ Route::get('/landing', [LandingPageController::class, 'index']);
 Route::get('/restoran/{id}', [LandingPageController::class, 'show']);
 Route::get('/restoran', [LandingPageController::class, 'search']);
 
-Route::get('/restoran/rekomendasi', [LandingPageController::class, 'rekomendasi']);
-Route::get('/restoran/terdekat', [LandingPageController::class, 'terdekat']);
+Route::get('/rekomendasi', [LandingPageController::class, 'rekomendasi']);
+Route::get('/terdekat', [LandingPageController::class, 'terdekat']);
 
 
 

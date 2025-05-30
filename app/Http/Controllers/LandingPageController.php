@@ -89,6 +89,7 @@ class LandingPageController extends Controller
         ]);
     }
 
+
         public function terdekat(Request $request)
     {
         $request->validate([

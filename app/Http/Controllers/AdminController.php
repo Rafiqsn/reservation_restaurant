@@ -59,6 +59,7 @@ class AdminController extends Controller
         'deskripsi' => 'nullable|string',
         'status' => 'required|in:buka,tutup',
         'kontak' => 'required|string|max:20',
+        'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         'nib' => 'required|string|max:20',
         'surat_halal' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
@@ -68,12 +69,19 @@ class AdminController extends Controller
     $filename = null;
 
         // Upload file
-        if ($request->hasFile('surat_halal')) {
+        if ($request->hasFile('foto')) {
             $file = $request->file('surat_halal');
             $filename = 'surat_halal' . time() . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('surat_halal'), $filename); // Simpan ke public/menu
         }
+
+         if ($request->hasFile('foto')) {
+            $file = $request->file('foto');
+            $filename = 'foto' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move(public_path('foto'), $filename); // Simpan ke public/menu
+        }
     DB::beginTransaction();
+
 
 
 
@@ -97,6 +105,7 @@ class AdminController extends Controller
             'deskripsi' => $validated['deskripsi'] ?? null,
             'status' => 'buka',
             'kontak' => $validated['kontak'],
+            'foto' => $validated['foto'],
             'nib' => $validated['nib'],
             'surat_halal' => $filename ,
 
@@ -136,6 +145,7 @@ class AdminController extends Controller
             'lokasi' => $resto?->lokasi,
             'status' => $resto?->status,
             'kontak' => $resto?->kontak,
+            'foto' => $resto?->foto,
             'nib' => $resto?->nib,
             'surat_halal' => $resto?->surat_halal,
 
@@ -160,6 +170,7 @@ class AdminController extends Controller
         'lokasi' => 'sometimes|string',
         'status' => 'sometimes|in:buka,tutup',
         'kontak' => 'sometimes|string|max:20',
+        'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         'nib' => 'nullable|string|max:100',
         'surat_halal' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048', // validasi file
     ]);
@@ -183,6 +194,11 @@ class AdminController extends Controller
             $restaurant->kontak = $validated['kontak'] ?? $restaurant->kontak;
             $restaurant->nib = $validated['nib'] ?? $restaurant->nib;
 
+            if ($request->hasFile('foto')) {
+                // Simpan file surat halal ke storage
+                $path = $request->file('foto')->store('foto', 'public');
+                $restaurant->foto = $path;
+            }
             if ($request->hasFile('surat_halal')) {
                 // Simpan file surat halal ke storage
                 $path = $request->file('surat_halal')->store('surat_halal', 'public');

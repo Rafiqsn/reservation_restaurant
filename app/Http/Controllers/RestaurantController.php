@@ -35,10 +35,10 @@ class RestaurantController extends Controller
             ->get()
             ->map(function ($r) {
                 return [
-                    'nama' => $r->pengguna->nama ?? 'N/A',
+                    'nama' => $r->user->nama ?? 'N/A',
                     'jumlah_orang' => $r->jumlah_orang,
                     'waktu' => date('H:i', strtotime($r->waktu)) . '-' . date('H:i', strtotime('+1 hour', strtotime($r->waktu))),
-                    'nomor_meja' => $r->kursi->nomor ?? '-',
+                    'nomor_meja' => $r->kursi->nomor_kursi ?? '-',
                 ];
             });
 

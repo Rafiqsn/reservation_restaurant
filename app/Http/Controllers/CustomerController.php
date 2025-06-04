@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
 use App\Http\Resources\UserResource;
 use App\Models\Restaurant;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 
 class CustomerController extends Controller
@@ -73,53 +74,120 @@ class CustomerController extends Controller
 
 
 
-        public function index()
+    public function index()
     {
-        $users = User::where('peran', 'pemesan')->get();
-
-        return UserResource::collection($users);
-    }
-        // GET /admin/customers/{id}
-        public function show(string $id)
-    {
-        $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
-
-        return new UserResource($user);
-    }
-
-
-
-    // PUT /admin/customers/{id}
-    public function update(Request $request,string $id)
-    {
-        $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
-
-        $validated = $request->validate([
-            'nama' => 'sometimes|string|max:255',
-            'email' => ['sometimes', 'email', Rule::unique('pengguna')->ignore($user->id)],
-            'kata_sandi' => 'nullable|string|min:6',
-            'no_hp' => 'sometimes|string|max:20',
-        ]);
-
-        $user->nama = $validated['nama'] ?? $user->nama;
-        $user->email = $validated['email'] ?? $user->email;
-        $user->no_hp = $validated['no_hp'] ?? $user->no_hp;
-
-        if (!empty($validated['kata_sandi'])) {
-            $user->kata_sandi = Hash::make($validated['kata_sandi']);
+        try {
+            $users = User::where('peran', 'pemesan')->get();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Daftar pelanggan berhasil diambil.',
+                'data' => UserResource::collection($users),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get customers: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil daftar pelanggan.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $user->save();
-
-        return new UserResource($user);
     }
 
-    // DELETE /admin/customers/{id}
+    public function show(string $id)
+    {
+        try {
+            $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data pelanggan berhasil diambil.',
+                'data' => new UserResource($user),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pelanggan tidak ditemukan.',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Failed to get customer: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data pelanggan.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function update(Request $request, string $id)
+    {
+        try {
+            $user = User::where('peran', 'pemesan')->where('id', $id)->firstOrFail();
+
+            $validated = $request->validate([
+                'nama' => 'sometimes|string|max:255',
+                'email' => ['sometimes', 'email', Rule::unique('pengguna')->ignore($user->id)],
+                'kata_sandi' => 'nullable|string|min:6',
+                'no_hp' => 'sometimes|string|max:20',
+            ]);
+
+            $user->nama = $validated['nama'] ?? $user->nama;
+            $user->email = $validated['email'] ?? $user->email;
+            $user->no_hp = $validated['no_hp'] ?? $user->no_hp;
+
+            if (!empty($validated['kata_sandi'])) {
+                $user->kata_sandi = Hash::make($validated['kata_sandi']);
+            }
+
+            $user->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data pelanggan berhasil diperbarui.',
+                'data' => new UserResource($user),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pelanggan tidak ditemukan.',
+            ], 404);
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal.',
+                'errors' => $ve->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Failed to update customer: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memperbarui data pelanggan.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function destroy($id)
     {
-        $user = User::where('peran', 'pemesan')->findOrFail($id);
-        $user->delete();
+        try {
+            $user = User::where('peran', 'pemesan')->findOrFail($id);
+            $user->delete();
 
-        return response()->json(['message' => 'Customer berhasil dihapus']);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Customer berhasil dihapus.',
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pelanggan tidak ditemukan.',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete customer: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal menghapus pelanggan.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
+
 }

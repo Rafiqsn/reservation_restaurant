@@ -19,7 +19,6 @@ class Table extends Model
         'kapasitas',
         'posisi',
         'status',
-        'denah_meja',
     ];
 
     public function restaurant()

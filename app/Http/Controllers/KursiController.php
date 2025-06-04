@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Table;
 use App\Http\Resources\TableResource;
+use App\Models\Restaurant;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -24,8 +25,6 @@ class KursiController extends Controller{
 
         return response()->json($table);
     }
-
-
 
 
 
@@ -59,7 +58,6 @@ class KursiController extends Controller{
             'kapasitas' => $request->kapasitas,
             'posisi' => $request->posisi,
             'status' => $request->status,
-            'denah_meja' => null,
         ]);
 
         return response()->json(['message' => 'Kursi berhasil ditambahkan', 'data' => $kursi]);
@@ -68,19 +66,48 @@ class KursiController extends Controller{
 
 
 
-    public function uploadDenah(Request $request, $id)
+    public function uploadDenah(Request $request)
     {
         $request->validate([
             'denah_meja' => 'required|image|mimes:png,jpg,jpeg|max:2048'
         ]);
 
-        $path = $request->file('denah_meja')->store("denah/$id", 'public');
+        $user = $request->user();
 
-        // Update semua kursi restoran dengan denah ini
-        Table::where('restoran_id', $id)->update(['denah_meja' => $path]);
+        if (!$user->restoran) {
+            return response()->json(['message' => 'Restoran tidak ditemukan untuk user ini'], 404);
+        }
 
-        return response()->json(['message' => 'Denah meja berhasil diunggah', 'path' => $path]);
+        $restoran = $user->restoran;
+        $file = $request->file('denah_meja');
+        $filename = 'denah_' . time() . '.' . $file->getClientOriginalExtension();
+        $folder = "denah/{$restoran->id}";
+
+        // Hapus file denah lama jika ada
+        if ($restoran->denah_meja) {
+            $oldFile = storage_path("app/public/$folder/{$restoran->denah_meja}");
+            if (file_exists($oldFile)) {
+                unlink($oldFile);
+            }
+        }
+
+        // Simpan file denah baru
+        $file->storeAs($folder, $filename, 'public');
+
+        // Simpan nama file ke database (bukan path)
+        $restoran->denah_meja = $filename;
+        $restoran->save();
+
+        // Buat URL lengkap denah
+        $url = url("storage/$folder/$filename");
+
+        return response()->json([
+            'message' => 'Denah meja berhasil diunggah',
+            'filename' => $filename,
+            'url' => $url,
+        ]);
     }
+
 
 
 

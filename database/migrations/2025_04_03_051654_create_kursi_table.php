@@ -13,7 +13,6 @@ return new class extends Migration {
             $table->integer('kapasitas');
             $table->enum('posisi', ['didalam', 'diluar']);
             $table->enum('status', ['tersedia', 'dipesan']);
-            $table->longText('denah_meja')->nullable();
             $table->timestamps();
 
             $table->foreign('restoran_id')->references('id')->on('restoran')->onDelete('cascade');

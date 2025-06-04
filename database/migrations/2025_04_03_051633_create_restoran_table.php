@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->longText('foto')->nullable();
             $table->string('nib')->nullable();
             $table->string('surat_halal')->nullable();
-
+            $table->longText('denah_meja')->nullable();
             $table->boolean('is_recommended')->default(false);
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();

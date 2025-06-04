@@ -70,6 +70,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users/{id}', [AdminController::class, 'show']);
         Route::put('/users/{id}', [AdminController::class, 'update']);
         Route::delete('/users/{id}', [AdminController::class, 'destroy']);
+        Route::delete('/users/foto-tambahan/{id}', [AdminController::class, 'destroyfoto']);
+
 
         Route::get('/customers', [CustomerController::class, 'index']);
         Route::get('/customers/{id}', [CustomerController::class, 'show']);
@@ -81,8 +83,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/restoran', [AdminController::class, 'adminIndex']);
 
         //edit profile
-        Route::get('/profile/edit/{id}', [AdminController::class, 'adminProfileShow']);
-        Route::put('/profile/edit/{id}', [AdminController::class, 'adminProfileUpdate']);
+        Route::get('/profile/edit', [AdminController::class, 'adminProfileShow']);
+        Route::put('/profile/edit', [AdminController::class, 'adminProfileUpdate']);
 
      });
 
@@ -95,7 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
         //manajemen meja
         Route::get('/kursi', [KursiController::class, 'index']);
         Route::post('/kursi', [KursiController::class, 'store']);
-        Route::post('/kursi/upload-denah/{id}', [KursiController::class, 'uploadDenah']);
+        Route::post('/kursi/upload-denah', [KursiController::class, 'uploadDenah']);
         Route::delete('/kursi/{id}', [KursiController::class, 'destroy']);
 
         //kelola reservasi

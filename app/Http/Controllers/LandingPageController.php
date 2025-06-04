@@ -51,7 +51,8 @@ class LandingPageController extends Controller
             'owner',
             'jamOperasional',
             'menus' => fn($q) => $q->where('highlight', true)->limit(3),
-            'ulasan.reservasi.user'
+            'ulasan.reservasi.user',
+            'fotoTambahan'
         ])->findOrFail($id);
 
         return new RestaurantResource($restoran);

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\URL;
 
 class Restaurant extends Model
 {
@@ -16,7 +17,9 @@ class Restaurant extends Model
         'nama',
         'lokasi',
         'deskripsi',
+        'foto',
         'status',
+        'denah_meja',
         'kontak',
         'nib',
         'surat_halal',
@@ -55,6 +58,27 @@ class Restaurant extends Model
         public function ulasan()
     {
         return $this->hasMany(Ulasan::class, 'restoran_id');
+    }
+
+       public function getFotoUrlAttribute()
+    {
+        return $this->foto ? URL::to('/foto/' . $this->foto) : null;
+    }
+
+    public function getSuratHalalUrlAttribute()
+    {
+        return $this->surat_halal ? URL::to('/surat_halal/' . $this->surat_halal) : null;
+    }
+
+    public function getDenahMejaUrlAttribute()
+    {
+        return url("storage/denah/{$this->id}/{$this->denah_meja}");
+    }
+
+
+        public function fotoTambahan()
+    {
+        return $this->hasMany(RestoranFoto::class, 'restoran_id');
     }
 
 

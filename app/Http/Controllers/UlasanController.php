@@ -8,6 +8,7 @@ use App\Models\Ulasan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class UlasanController extends Controller
 {
@@ -44,25 +45,37 @@ class UlasanController extends Controller
         return response()->json(['status' => 'success', 'data' => $ulasan]);
     }
 
-    public function lihatUlasanRestoran($id)
+        public function lihatUlasanRestoran($id)
     {
-        $restoran = Restaurant::with(['ulasan.pengguna'])->findOrFail($id);
+        try {
+            $restoran = Restaurant::with(['ulasan.pengguna'])->findOrFail($id);
 
-        $ulasanList = $restoran->ulasan->map(function ($ulasan) {
-            return [
-                'id' => $ulasan->id,
-                'rating' => $ulasan->rating,
-                'komentar' => $ulasan->komentar,
-                'nama_pengulas' => optional($ulasan->pengguna)->nama,
-                'tanggal' => optional($ulasan->created_at)->format('Y-m-d'),
-            ];
-        });
+            $ulasanList = $restoran->ulasan->map(function ($ulasan) {
+                return [
+                    'id' => $ulasan->id,
+                    'rating' => $ulasan->rating,
+                    'komentar' => $ulasan->komentar,
+                    'nama_pengulas' => optional($ulasan->pengguna)->nama ?? 'Anonim',
+                    'tanggal' => optional($ulasan->created_at)->format('Y-m-d'),
+                ];
+            });
 
-        return response()->json([
-            'restoran' => $restoran->nama,
-            'jumlah_ulasan' => $ulasanList->count(),
-            'rata_rata_rating' => round($restoran->ulasan->avg('rating'), 1),
-            'ulasan' => $ulasanList,
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'restoran' => $restoran->nama,
+                    'jumlah_ulasan' => $ulasanList->count(),
+                    'rata_rata_rating' => round($restoran->ulasan->avg('rating'), 1),
+                    'ulasan' => $ulasanList,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil ulasan restoran: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat mengambil ulasan restoran.',
+            ], 500);
+        }
     }
 }

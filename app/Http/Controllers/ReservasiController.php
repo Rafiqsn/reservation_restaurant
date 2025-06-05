@@ -12,71 +12,166 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 
 
 class ReservasiController extends Controller
 {
-    public function daftarReservasi()
-{
-    $reservasi = Reservation::with(['user', 'kursi'])
-        ->orderBy('tanggal', 'desc')
-        ->orderBy('waktu', 'asc')
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'nama_pemesan' => $item->user->nama ?? '-',
-                'tanggal' => \Carbon\Carbon::parse($item->tanggal)->translatedFormat('l, d F Y'),
-                'waktu' => $item->waktu,
-                'nomor_kursi' => $item->kursi->nomor_kursi ?? 'Belum dipilih',
-                'status' => ucfirst($item->status),
-            ];
-        });
-
-    return response()->json([
-        'status' => 'success',
-        'data' => $reservasi
-    ]);
-}
-
-    public function konfirmasi($reservasi_id)
+        public function daftarReservasi()
     {
-        $reservasi = Reservation::findOrFail($reservasi_id);
+        try {
+            $reservasi = Reservation::with(['user', 'kursi'])
+                ->orderBy('tanggal', 'desc')
+                ->orderBy('waktu', 'asc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'nama_pemesan' => $item->user->nama ?? '-',
+                        'tanggal' => \Carbon\Carbon::parse($item->tanggal)->translatedFormat('l, d F Y'),
+                        'waktu' => $item->waktu,
+                        'nomor_kursi' => $item->kursi->nomor_kursi ?? 'Belum dipilih',
+                        'status' => ucfirst($item->status),
+                    ];
+                });
 
-        // Update status
-        $reservasi->status = 'dikonfirmasi';
-        $reservasi->save();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Reservasi berhasil ditandai sebagai selesai.',
-            'data' => [
-                'id' => $reservasi->id,
-                'status' => $reservasi->status,
-            ]
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data reservasi berhasil diambil.',
+                'data' => $reservasi,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil daftar reservasi: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat mengambil data reservasi.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
+
+
+        public function konfirmasi($reservasi_id)
+    {
+        try {
+            $reservasi = Reservation::findOrFail($reservasi_id);
+            $reservasi->status = 'dikonfirmasi';
+            $reservasi->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Reservasi berhasil dikonfirmasi.',
+                'data' => [
+                    'id' => $reservasi->id,
+                    'status' => $reservasi->status,
+                ]
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Reservasi tidak ditemukan.',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengkonfirmasi reservasi: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat mengkonfirmasi reservasi.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 
         public function batalkan($reservasi_id)
     {
-        $reservasi = Reservation::findOrFail($reservasi_id);
+        try {
+            $reservasi = Reservation::findOrFail($reservasi_id);
 
-        // Optional: validasi status sebelumnya
-        if ($reservasi->status === 'dibatalkan') {
+            if ($reservasi->status === 'dibatalkan') {
+                return response()->json([
+                    'status' => 'failed',
+                    'message' => 'Reservasi sudah dibatalkan.',
+                ], 400);
+            }
+
+            $reservasi->status = 'dibatalkan';
+            $reservasi->save();
+
             return response()->json([
-                'status' => 'failed',
-                'message' => 'Reservasi sudah dibatalkan.',
-            ], 400);
+                'status' => 'success',
+                'message' => 'Reservasi berhasil dibatalkan.',
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Reservasi tidak ditemukan.',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Gagal membatalkan reservasi: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat membatalkan reservasi.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $reservasi->status = 'dibatalkan';
-        $reservasi->save();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Reservasi berhasil dibatalkan.',
-        ]);
     }
+
+        public function GetNotaRiwayat($reservasi_id)
+    {
+        try {
+            $reservasi = Reservation::with(['user', 'restaurant', 'reservationMenus.menu'])->findOrFail($reservasi_id);
+
+            // Generate nomor_reservasi jika belum ada
+            if (empty($reservasi->nomor_reservasi)) {
+                $reservasi->nomor_reservasi = strtoupper(substr(md5($reservasi->id . now()), 0, 6));
+            }
+
+            // Hitung total harga
+            $totalHarga = $reservasi->reservationMenus->sum(function ($item) {
+                return $item->menu->harga * $item->jumlah;
+            });
+
+            // Simpan jika ada perubahan
+            if ($reservasi->isDirty('nomor_reservasi') || $reservasi->total_harga !== $totalHarga) {
+                $reservasi->total_harga = $totalHarga;
+                $reservasi->save();
+            }
+
+            // Format tanggal
+            $tanggalFormatted = \Carbon\Carbon::parse($reservasi->tanggal)->translatedFormat('l d F, Y');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Nota berhasil diambil.',
+                'nota' => [
+                    'nomor_reservasi' => $reservasi->nomor_reservasi,
+                    'nama' => $reservasi->user->nama ?? '-',
+                    'no_hp' => $reservasi->user->no_hp ?? '-',
+                    'email' => $reservasi->user->email ?? '-',
+                    'nama_restoran' => $reservasi->restaurant->nama ?? '-',
+                    'tanggal' => $tanggalFormatted,
+                    'waktu' => $reservasi->waktu,
+                    'jumlah_orang' => $reservasi->jumlah_orang,
+                    'catatan' => $reservasi->catatan,
+                    'total_harga' => 'Rp ' . number_format($totalHarga, 0, ',', '.'),
+                    'status' => $reservasi->status,
+                ]
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Reservasi tidak ditemukan.',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil nota reservasi: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat mengambil nota reservasi.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 
 
 
@@ -433,46 +528,7 @@ class ReservasiController extends Controller
     ]);
     }
 
-        public function GetNotaRiwayat($reservasi_id)
-    {
-        $reservasi = Reservation::with(['user', 'restaurant', 'reservationMenus.menu'])->findOrFail($reservasi_id);
 
-        // Generate nomor_reservasi jika belum ada
-        if (empty($reservasi->nomor_reservasi)) {
-            $reservasi->nomor_reservasi = strtoupper(substr(md5($reservasi->id . now()), 0, 6));
-        }
-
-        // Hitung total harga
-        $totalHarga = $reservasi->reservationMenus->sum(function ($item) {
-            return $item->menu->harga * $item->jumlah;
-        });
-
-        // Simpan nomor_reservasi dan total_harga jika ada perubahan
-        if ($reservasi->isDirty('nomor_reservasi') || $reservasi->total_harga !== $totalHarga) {
-            $reservasi->total_harga = $totalHarga;
-            $reservasi->save();
-        }
-
-        // Format tanggal ke Bahasa Indonesia
-        $tanggalFormatted = \Carbon\Carbon::parse($reservasi->tanggal)->translatedFormat('l d F, Y');
-
-        return response()->json([
-            'status' => 'success',
-            'nota' => [
-                'nomor_reservasi' => $reservasi->nomor_reservasi,
-                'nama' => $reservasi->user->nama ?? '-',
-                'no_hp' => $reservasi->user->no_hp ?? '-',
-                'email' => $reservasi->user->email ?? '-',
-                'nama_restoran' => $reservasi->restaurant->nama ?? '-',
-                'tanggal' => $tanggalFormatted,
-                'waktu' => $reservasi->waktu,
-                'jumlah_orang' => $reservasi->jumlah_orang,
-                'catatan' => $reservasi->catatan,
-                'total_harga' => 'Rp ' . number_format($totalHarga, 0, ',', '.'),
-                'status' => $reservasi->status,
-            ]
-        ]);
-    }
 
 
 

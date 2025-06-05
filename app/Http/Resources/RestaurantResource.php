@@ -54,7 +54,7 @@ class RestaurantResource extends JsonResource
         }),
 
         'jam_operasional' => $this->whenLoaded('jamOperasional', function () {
-            return OperationalHourResource::collection($this->jamOperasional);
+            return new OperationalHourResource($this->jamOperasional);
         }),
 
         'meja' => $this->whenLoaded('tables', function () {

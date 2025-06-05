@@ -12,38 +12,76 @@ use Illuminate\Support\Facades\Log;
 
 class UlasanController extends Controller
 {
+
     public function store(Request $request)
     {
-        $request->validate([
-            'reservasi_id' => 'required|exists:reservasi,id',
-            'rating' => 'required|integer|min:1|max:5',
-            'komentar' => 'nullable|string',
-        ]);
+            $request->validate([
+                'reservasi_id' => 'required|exists:reservasi,id',
+                'rating' => 'required|integer|min:1|max:5',
+                'komentar' => 'nullable|string',
+            ]);
 
-        $reservasi = Reservation::findOrFail($request->reservasi_id);
+            try {
+                $user = $request->user();
+                if (!$user) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'User belum login',
+                        'error' => 'Unauthorized',
+                    ], 401);
+                }
 
-        // Pastikan waktu reservasi sudah lewat
-        $waktuReservasi = Carbon::parse($reservasi->tanggal . ' ' . $reservasi->waktu);
-        if (now()->lt($waktuReservasi)) {
-            return response()->json(['error' => 'Belum bisa memberi ulasan.'], 403);
+                $reservasi = Reservation::findOrFail($request->reservasi_id);
+
+                if ($reservasi->pengguna_id !== $user->id) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Reservasi tidak ditemukan untuk pengguna ini',
+                        'error' => 'Forbidden',
+                    ], 403);
+                }
+
+                // Pastikan waktu reservasi sudah lewat
+                $waktuReservasi = Carbon::parse($reservasi->tanggal . ' ' . $reservasi->waktu);
+                if (now()->lt($waktuReservasi)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Belum bisa memberi ulasan karena waktu reservasi belum lewat',
+                        'error' => 'Forbidden',
+                    ], 403);
+                }
+
+                // Cegah duplikat ulasan
+                if ($reservasi->ulasan) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Ulasan sudah diberikan untuk reservasi ini',
+                        'error' => 'Conflict',
+                    ], 409);
+                }
+
+                $ulasan = Ulasan::create([
+                    'id' => Str::uuid(),
+                    'reservasi_id' => $reservasi->id,
+                    'restoran_id' => $reservasi->restoran_id,
+                    'pengguna_id' => $reservasi->pengguna_id,
+                    'rating' => $request->rating,
+                    'komentar' => $request->komentar,
+                ]);
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Ulasan berhasil dibuat',
+                    'data' => $ulasan,
+                ]);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Gagal membuat ulasan',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
         }
-
-        // Cegah duplikat ulasan
-        if ($reservasi->ulasan) {
-            return response()->json(['error' => 'Ulasan sudah diberikan.'], 409);
-        }
-
-        $ulasan = Ulasan::create([
-            'id' => Str::uuid(),
-            'reservasi_id' => $reservasi->id,
-            'restoran_id' => $reservasi->restoran_id,
-            'pengguna_id' => $reservasi->pengguna_id,
-            'rating' => $request->rating,
-            'komentar' => $request->komentar,
-        ]);
-
-        return response()->json(['status' => 'success', 'data' => $ulasan]);
-    }
 
         public function lihatUlasanRestoran($id)
     {

@@ -32,6 +32,7 @@ class AuthController extends Controller
             ]);
 
             return response()->json([
+                'status' => 'error',
                 'message' => 'Validasi gagal',
                 'errors' => $e->errors(),
             ], 422);
@@ -42,61 +43,85 @@ class AuthController extends Controller
             'nama' => $validated['nama'],
             'email' => $validated['email'],
             'kata_sandi' => bcrypt($validated['kata_sandi']),
-            'peran' => 'pemesan', // ⬅️ langsung tetapkan peran sebagai pemesan
+            'peran' => 'pemesan',
             'no_hp' => $validated['no_hp'],
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        Log::info('Register berhasil', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ]);
+
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user
+            'status' => 'success',
+            'message' => 'Registrasi berhasil',
+            'data' => [
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user
+            ]
         ]);
     }
-
 
     // LOGIN
 
-public function login(Request $request)
-{
-    try {
-        $request->validate([
-            'email' => 'required|email',
-            'kata_sandi' => 'required'
-        ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        if (! $user || ! Hash::check($request->kata_sandi, $user->kata_sandi)) {
-            Log::debug('Login gagal: email atau password salah', [
-                'email_input' => $request->email,
-                'user_found' => $user ? true : false,
+    public function login(Request $request)
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'kata_sandi' => 'required'
             ]);
-            throw ValidationException::withMessages([
-                'email' => ['Email atau kata sandi salah.'],
+
+            $user = User::where('email', $request->email)->first();
+
+            if (! $user || ! Hash::check($request->kata_sandi, $user->kata_sandi)) {
+                Log::debug('Login gagal: email atau password salah', [
+                    'email_input' => $request->email,
+                    'user_found' => $user ? true : false,
+                ]);
+                throw ValidationException::withMessages([
+                    'email' => ['Email atau kata sandi salah.'],
+                ]);
+            }
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            Log::info('Login berhasil', [
+                'user_id' => $user->id,
+                'email' => $user->email,
             ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Login berhasil',
+                'data' => [
+                    'token' => $token,
+                    'token_type' => 'Bearer',
+                    'user' => $user
+                ]
+            ]);
+        } catch (ValidationException $e) {
+            Log::debug('Login gagal: validasi error', [
+                'errors' => $e->errors(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Login gagal',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error login: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat login',
+            ], 500);
         }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login berhasil',
-            'token' => $token,
-            'user' => $user
-        ]);
-    } catch (ValidationException $e) {
-        return response()->json([
-            'message' => 'Login gagal',
-            'errors' => $e->errors(),
-        ], 422);
-    } catch (\Exception $e) {
-        Log::error('Error login: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Terjadi kesalahan saat login',
-        ], 500);
     }
-}
 
     // INFO USER
     public function me(Request $request)
@@ -105,15 +130,16 @@ public function login(Request $request)
     }
 
     // LOGOUT
-    public function logout(Request $request)
+        public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
-            'message' => 'Berhasil logout'
+            'status' => 'success',
+            'message' => 'Berhasil logout',
+            'data' => null,
         ]);
     }
-
 
     public function forgotPassword(Request $request)
     {
@@ -122,7 +148,12 @@ public function login(Request $request)
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+                'data' => null,
+            ], 422);
         }
 
         $status = Password::sendResetLink(
@@ -130,13 +161,21 @@ public function login(Request $request)
         );
 
         if ($status === Password::RESET_LINK_SENT) {
-            return response()->json(['message' => 'Reset password link has been sent to your email']);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Reset password link telah dikirim ke email Anda',
+                'data' => null,
+            ]);
         } else {
-            return response()->json(['message' => 'Unable to send reset link'], 500);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengirim link reset password',
+                'data' => null,
+            ], 500);
         }
     }
 
-    public function resetPassword(Request $request)
+        public function resetPassword(Request $request)
     {
         $request->validate([
             'token' => 'required',
@@ -153,8 +192,18 @@ public function login(Request $request)
             }
         );
 
-        return $status == Password::PASSWORD_RESET
-            ? response()->json(['message' => 'Password berhasil direset!'])
-            : response()->json(['message' => 'Reset token tidak valid.'], 500);
+        if ($status == Password::PASSWORD_RESET) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Password berhasil direset!',
+                'data' => null,
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Reset token tidak valid.',
+                'data' => null,
+            ], 500);
+        }
     }
 }

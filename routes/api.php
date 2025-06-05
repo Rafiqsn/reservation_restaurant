@@ -124,23 +124,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::middleware(['role:pemesan'])->prefix('pemesan')->group(function () {
-    //Alur Pesan
-        //isi format
-        Route::post('/reservasi/cek-ketersediaan', [ReservasiController::class, 'cekKetersediaan']);
-        //Pilih Menu
-        Route::get('/reservasi/pilih-menu', [ReservasiController::class, 'GetMenu']);
-        Route::post('/reservasi/pilih-menu', [ReservasiController::class, 'PilihMenu']);
-        //Pilih Kursi
-        Route::get('/reservasi/pilih-kursi', [ReservasiController::class, 'GetKursi']);
-        Route::post('/reservasi/pilih-kursi', [ReservasiController::class, 'PilihKursi']);
-        //Get nota
-        Route::get('/reservasi/konfirmasi-pesanan/{id}', [ReservasiController::class, 'GetNota']);
-        Route::post('/reservasi/konfirmasi-pesanan', [ReservasiController::class, 'tambahCatatan']);
+    // Pesan
+        Route::post('/reservasi/pesan', [ReservasiController::class, 'pesanreservasi']);
 
     //Profil Setting
         //Profil Page
         Route::get('/profil', [CustomerController::class, 'CustShow']);
-        Route::put('/profil/{id}', [CustomerController::class, 'updateProfile']);
+        Route::put('/profil', [CustomerController::class, 'updateProfile']);
         //Pesenan saya
         Route::get('/reservasi/pesanan-saya', [ReservasiController::class, 'PesananSaya']);
         //Riwayat Pesanan

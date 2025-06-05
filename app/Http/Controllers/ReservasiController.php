@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 
 class ReservasiController extends Controller
@@ -216,346 +217,224 @@ class ReservasiController extends Controller
         ]);
     }
 
-        public function cekKetersediaan(Request $request)
+    public function pesanreservasi(Request $request)
     {
-        $request->validate([
-            'restoran_id'   => 'required|uuid|exists:restoran,id',
-            'tanggal'       => 'required|date',
-            'jam'           => 'required|date_format:H:i',
-            'jumlah_orang'  => 'required|integer|min:1',
-            'kursi_id'      => 'nullable|uuid|exists:meja,id',
-        ]);
-
-        $user = Auth::user();
-
-        // Validasi restoran & kursi
-        $restoran = Restaurant::findOrFail($request->restoran_id);
-        $kursi = Table::where('id', $request->kursi_id)
-            ->where('restoran_id', $restoran->id)
-            ->first();
-
-        if ($request->filled('kursi_id')) {
-        $kursi = Table::where('id', $request->kursi_id)
-            ->where('restoran_id', $restoran->id)
-            ->first();
-
-        if (!$kursi) {
-            return response()->json([
-                'message' => 'Kursi tidak ditemukan atau tidak milik restoran ini.'
-            ], 404);
-        }
-    }
-
-        // Simpan reservasi awal
-        $reservasi = Reservation::create([
-            'id'            => Str::uuid(),
-            'pengguna_id'   => $user->id,
-            'restoran_id'   => $restoran->id,
-            'kursi_id'      => $request->kursi_id ?? null,
-            'tanggal'       => $request->tanggal,
-            'waktu'         => $request->jam,
-            'jumlah_orang'  => $request->jumlah_orang,
-            'status'        => 'menunggu',
-        ]);
-
-        return response()->json([
-            'message' => 'Ketersediaan tersedia. Reservasi awal disimpan.',
-            'data' => [
-                'reservasi_id' => $reservasi->id
-            ]
-        ]);
-    }
-
-
-    public function GetMenu(Request $request)
-{
-    $request->validate([
-        'restoran_id' => 'required|uuid|exists:restoran,id',
-        'jenis'       => 'nullable|in:makanan,minuman',
-    ]);
-
-    $query = Menu::where('restoran_id', $request->restoran_id)
-                 ->where('status', 'tersedia');
-
-    if ($request->filled('jenis')) {
-        $query->where('jenis', $request->jenis);
-    }
-
-    $menus = $query->get(['id', 'nama', 'deskripsi', 'jenis', 'harga', 'foto', 'highlight']);
-
-    return response()->json([
-        'message' => 'Daftar menu berhasil diambil',
-        'data' => $menus,
-    ]);
-}
-
-
-
-        public function PilihMenu(Request $request)
-    {
-        $request->validate([
-            'reservasi_id'   => 'required|uuid|exists:reservasi,id',
+        $validator = Validator::make($request->all(), [
+            'restoran_id'    => 'required|uuid|exists:restoran,id',
+            'tanggal'        => 'required|date',
+            'jam'            => 'required|date_format:H:i',
+            'jumlah_orang'   => 'required|integer|min:1',
+            'kursi_id'       => 'required|uuid|exists:kursi,id',
             'menu'           => 'required|array|min:1',
             'menu.*.menu_id' => 'required|uuid|exists:menu,id',
             'menu.*.jumlah'  => 'required|integer|min:1',
+            'catatan'        => 'nullable|string',
         ]);
 
-        try {
-            $reservasi = Reservation::findOrFail($request->reservasi_id);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'Error',
+                'message' => 'Validasi gagal. Periksa input Anda.',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'status' => 'Error',
+                'message' => 'Unauthorized. Silakan login.'], 401);
+        }
+
+        try {
             DB::beginTransaction();
 
+            $restoran = Restaurant::findOrFail($request->restoran_id);
+
+            // Validasi kursi
+            $kursi = Table::where('id', $request->kursi_id)
+                        ->where('restoran_id', $restoran->id)
+                        ->first();
+
+            if (!$kursi) {
+                return response()->json([
+                    'status' => 'Error',
+                    'message' => 'Kursi tidak valid untuk restoran ini.'
+                ], 422);
+            }
+
+            // Cek bentrok jadwal kursi
+            $waktuMulai   = Carbon::parse($request->jam);
+            $waktuSelesai = (clone $waktuMulai)->addHours(2);
+
+            $bentrok = Reservation::where('restoran_id', $restoran->id)
+                ->where('tanggal', $request->tanggal)
+                ->where('kursi_id', $request->kursi_id)
+                ->where(function ($query) use ($waktuMulai, $waktuSelesai) {
+                    $query->whereTime('waktu', '<', $waktuSelesai->format('H:i'))
+                        ->whereRaw("ADDTIME(waktu, '2:00') > ?", [$waktuMulai->format('H:i')]);
+                })
+                ->exists();
+
+            if ($bentrok) {
+                return response()->json([
+                    'status' => 'Error',
+                    'message' => 'Kursi sudah dipesan pada waktu tersebut.'
+                ], 422);
+            }
+
+            // Simpan reservasi
+            $reservasi = Reservation::create([
+                'id'              => Str::uuid(),
+                'pengguna_id'     => $user->id,
+                'restoran_id'     => $restoran->id,
+                'kursi_id'        => $request->kursi_id,
+                'tanggal'         => $request->tanggal,
+                'waktu'           => $request->jam,
+                'jumlah_orang'    => $request->jumlah_orang,
+                'status'          => 'menunggu',
+                'catatan'         => $request->catatan,
+                'nomor_reservasi' => strtoupper(substr(md5(Str::uuid()), 0, 6)),
+            ]);
+
+            $totalHarga = 0;
+
+            // Tambahkan menu yang dipesan
             foreach ($request->menu as $item) {
                 $menu = Menu::findOrFail($item['menu_id']);
+                $subtotal = $menu->harga * $item['jumlah'];
+                $totalHarga += $subtotal;
+
                 ReservationMenu::create([
                     'id'            => Str::uuid(),
                     'reservasi_id'  => $reservasi->id,
                     'menu_id'       => $menu->id,
                     'jumlah'        => $item['jumlah'],
-                    'subtotal'      => $menu->harga * $item['jumlah'],
+                    'subtotal'      => $subtotal,
                 ]);
             }
+
+            $reservasi->total_harga = $totalHarga;
+            $reservasi->save();
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Menu berhasil ditambahkan ke reservasi.',
-                'data' => $reservasi->load('menu.menu')
-            ]);
+                'status' => 'success',
+                'message' => 'Reservasi berhasil dibuat.',
+                'data'    => $reservasi->load('menu.menu', 'kursi', 'restaurant')
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            Log::error('Gagal membuat reservasi: ' . $e->getMessage(), [
+                'status' => 'Error',
+                'trace' => $e->getTraceAsString(),
+                'user_id' => $user->id ?? null,
+                'input' => $request->all()
+            ]);
+
             return response()->json([
-                'message' => 'Gagal menambahkan menu ke reservasi.',
-                'error' => $e->getMessage()
+                'status' => 'Error',
+                'message' => 'Terjadi kesalahan saat memproses reservasi.',
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
 
 
-    public function GetKursi(Request $request)
+            public function PesananSaya()
     {
-        $request->validate([
-            'reservasi_id' => 'required|uuid|exists:reservasi,id',
-        ]);
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User belum login',
+                    'error' => 'Unauthorized',
+                ], 401);
+            }
 
-        $reservasi = Reservation::with('restaurant')->findOrFail($request->reservasi_id);
+            $reservasiMenunggu = Reservation::with(['restaurant', 'reservationMenus.menu'])
+                ->where('pengguna_id', $user->id)
+                ->where('status', 'menunggu')
+                ->get()
+                ->map(function ($reservasi) {
+                    $totalHarga = $reservasi->reservationMenus->sum(function ($item) {
+                        return $item->menu->harga * $item->jumlah;
+                    });
 
-        $waktuMulai = Carbon::parse($reservasi->waktu);
-        $waktuSelesai = (clone $waktuMulai)->addHours(2);
-
-        $semuaKursi = Table::where('restoran_id', $reservasi->restoran_id)->get();
-
-        // Ambil kursi yang bentrok dalam rentang 2 jam (kecuali reservasi ini sendiri)
-        $kursiTerpakai = Reservation::where('restoran_id', $reservasi->restoran_id)
-            ->where('tanggal', $reservasi->tanggal)
-            ->where('id', '!=', $reservasi->id)
-            ->where(function ($query) use ($waktuMulai, $waktuSelesai) {
-                $query->where(function ($q) use ($waktuMulai, $waktuSelesai) {
-                    $q->whereTime('waktu', '<', $waktuSelesai->format('H:i'))
-                    ->whereRaw("ADDTIME(waktu, '2:00') > ?", [$waktuMulai->format('H:i')]);
+                    return [
+                        'id_reservasi' => $reservasi->nomor_reservasi ?? substr($reservasi->id, 0, 5),
+                        'foto_restoran' => $reservasi->restaurant->foto ?? null,
+                        'nama_restoran' => $reservasi->restaurant->nama ?? '-',
+                        'tanggal' => \Carbon\Carbon::parse($reservasi->tanggal)->translatedFormat('l, d F Y'),
+                        'jumlah_orang' => $reservasi->jumlah_orang,
+                        'total_harga' => 'Rp ' . number_format($totalHarga, 0, ',', '.'),
+                    ];
                 });
-            })
-            ->pluck('kursi_id')
-            ->toArray();
 
-        $siapdipakai = $semuaKursi->map(function ($kursi) use ($kursiTerpakai) {
-            return [
-                'id' => $kursi->id,
-                'nomor_kursi' => $kursi->nomor_kursi,
-                'kapasitas' => $kursi->kapasitas,
-                'tersedia' => !in_array($kursi->id, $kursiTerpakai),
-            ];
-        });
-
-        return response()->json([
-            'status' => 'success',
-            'restoran' => $reservasi->restaurant->nama ?? null,
-            'tanggal' => $reservasi->tanggal,
-            'waktu' => $reservasi->waktu,
-            'denah_meja' => $semuaKursi->first()->denah_meja ?? null,
-            'siapdipakai' => $siapdipakai,
-        ]);
-    }
-
-
-
-    public function PilihKursi(Request $request)
-    {
-        $request->validate([
-            'reservasi_id' => 'required|uuid|exists:reservasi,id',
-            'kursi_id'     => 'required|uuid|exists:kursi,id',
-        ]);
-
-        $reservasi = Reservation::findOrFail($request->reservasi_id);
-
-        // Hitung waktu mulai dan selesai (durasi 2 jam)
-        $waktuMulai = Carbon::parse($reservasi->waktu);
-        $waktuSelesai = (clone $waktuMulai)->addHours(2);
-
-        // Cek apakah kursi sudah dipakai oleh reservasi lain dalam rentang waktu 2 jam
-        $sudahDipakai = Reservation::where('restoran_id', $reservasi->restoran_id)
-            ->where('tanggal', $reservasi->tanggal)
-            ->where('kursi_id', $request->kursi_id)
-            ->where('id', '!=', $reservasi->id)
-            ->where(function ($query) use ($waktuMulai, $waktuSelesai) {
-                $query->where(function ($q) use ($waktuMulai, $waktuSelesai) {
-                    $q->whereTime('waktu', '<', $waktuSelesai->format('H:i'))
-                    ->whereRaw("ADDTIME(waktu, '2:00') > ?", [$waktuMulai->format('H:i')]);
-                });
-            })
-            ->exists();
-
-        if ($sudahDipakai) {
             return response()->json([
-                'message' => 'Kursi sudah digunakan dalam waktu 2 jam tersebut.'
-            ], 422);
+                'status' => 'success',
+                'message' => 'Data reservasi menunggu berhasil diambil',
+                'data' => $reservasiMenunggu,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data reservasi menunggu',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        // Jika tidak bentrok, simpan kursi ke dalam reservasi
-        $reservasi->kursi_id = $request->kursi_id;
-        $reservasi->save();
-
-        return response()->json([
-            'message' => 'Kursi berhasil dipilih.',
-            'data' => $reservasi->load('kursi')
-        ]);
     }
-
-
-
-
-    public function GetNota($id)
-    {
-        $reservasi = Reservation::with(['user', 'restaurant', 'reservationMenus.menu'])->findOrFail($id);
-
-        // Format tanggal
-        $hari = Carbon::parse($reservasi->tanggal)->translatedFormat('l');
-        $tanggal = Carbon::parse($reservasi->tanggal)->translatedFormat('d F, Y');
-
-        // Format total harga
-        $totalHarga = $reservasi->reservationMenus->sum(function ($item) {
-            return $item->menu->harga * $item->jumlah;
-        });
-
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'nama'     => $reservasi->user->nama,
-                'no_hp'     => $reservasi->user->no_hp ?? '-', // sesuaikan dengan field
-                'email'            => $reservasi->user->email,
-                'nama_restoran'    => $reservasi->restaurant->nama,
-                'tanggal'          => "$hari, $tanggal",
-                'waktu'            => Carbon::parse($reservasi->waktu)->format('H:i') . ' - ' . Carbon::parse($reservasi->waktu)->addMinutes(60)->format('H:i') . ' WIB',
-                'jumlah_orang'     => $reservasi->jumlah_orang,
-                'total_harga'      => 'Rp ' . number_format($totalHarga, 0, ',', '.'),
-
-            ]
-        ]);
-    }
-
-        public function tambahCatatan(Request $request)
-    {
-        $request->validate([
-            'reservasi_id' => 'required|uuid|exists:reservasi,id',
-            'catatan' => 'nullable|string',
-        ]);
-
-        $reservasi = Reservation::with(['user', 'restaurant', 'reservationMenus.menu'])->findOrFail($request->reservasi_id);
-
-        // Generate nomor_reservasi jika belum ada
-        if (empty($reservasi->nomor_reservasi)) {
-            $reservasi->nomor_reservasi = strtoupper(substr(md5($reservasi->id . now()), 0, 6));
-        }
-
-        // Hitung total harga dan simpan ke database
-        $totalHarga = $reservasi->reservationMenus->sum(function ($item) {
-            return $item->menu->harga * $item->jumlah;
-        });
-        $reservasi->total_harga = $totalHarga;
-
-        // Simpan catatan
-        $reservasi->catatan = $request->catatan;
-
-        $reservasi->save();
-
-        // Format tanggal ke Bahasa Indonesia
-        $tanggalFormatted = \Carbon\Carbon::parse($reservasi->tanggal)->translatedFormat('l d F, Y');
-
-        return response()->json([
-            'status' => 'success',
-            'nota' => [
-                'nomor_reservasi' => $reservasi->nomor_reservasi,
-                'nama' => $reservasi->user->nama ?? '-',
-                'no_hp' => $reservasi->user->no_hp ?? '-',
-                'email' => $reservasi->user->email ?? '-',
-                'nama_restoran' => $reservasi->restaurant->nama ?? '-',
-                'tanggal' => $tanggalFormatted,
-                'waktu' => $reservasi->waktu,
-                'jumlah_orang' => $reservasi->jumlah_orang,
-                'catatan' => $reservasi->catatan,
-                'total_harga' => 'Rp ' . number_format($totalHarga, 0, ',', '.'),
-            ]
-        ]);
-    }
-
-
-
-
-
-        public function PesananSaya()
-    {
-        $reservasiMenunggu = Reservation::with(['restaurant', 'reservationMenus.menu'])
-        ->where('status', 'menunggu') // sesuaikan statusnya
-        ->get()
-        ->map(function ($reservasi) {
-            $totalHarga = $reservasi->reservationMenus->sum(function ($item) {
-                return $item->menu->harga * $item->jumlah;
-            });
-
-            return [
-                'id_reservasi' => $reservasi->nomor_reservasi ?? substr($reservasi->id, 0, 5),
-                'foto_restoran' => $reservasi->restaurant->foto ?? null,
-                'nama_restoran' => $reservasi->restaurant->nama ?? '-',
-                'tanggal' => \Carbon\Carbon::parse($reservasi->tanggal)->translatedFormat('l, d F Y'),
-                'jumlah_orang' => $reservasi->jumlah_orang,
-                'total_harga' => 'Rp ' . number_format($totalHarga, 0, ',', '.'),
-            ];
-        });
-
-    return response()->json([
-        'status' => 'success',
-        'data' => $reservasiMenunggu,
-    ]);
-    }
-
 
 
 
 
     public function riwayatpesanan()
     {
-        $reservasiSemua = Reservation::with(['restaurant', 'reservationMenus.menu'])
-            ->get()
-            ->map(function ($reservasi) {
-                $totalHarga = $reservasi->reservationMenus->sum(function ($item) {
-                    return $item->menu->harga * $item->jumlah;
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User belum login',
+                    'error' => 'Unauthorized',
+                ], 401);
+            }
+
+            $reservasiSemua = Reservation::with(['restaurant', 'reservationMenus.menu'])
+                ->where('pengguna_id', $user->id)
+                ->get()
+                ->map(function ($reservasi) {
+                    $totalHarga = $reservasi->reservationMenus->sum(function ($item) {
+                        return $item->menu->harga * $item->jumlah;
+                    });
+
+                    return [
+                        'id_reservasi' => $reservasi->nomor_reservasi ?? substr($reservasi->id, 0, 5),
+                        'foto_restoran' => $reservasi->restaurant->foto ?? null,
+                        'nama_restoran' => $reservasi->restaurant->nama ?? '-',
+                        'tanggal' => \Carbon\Carbon::parse($reservasi->tanggal)->translatedFormat('l, d F Y'),
+                        'jumlah_orang' => $reservasi->jumlah_orang,
+                        'total_harga' => 'Rp ' . number_format($totalHarga, 0, ',', '.'),
+                        'status' => $reservasi->status,
+                    ];
                 });
 
-                return [
-                    'id_reservasi' => $reservasi->nomor_reservasi ?? substr($reservasi->id, 0, 5),
-                    'foto_restoran' => $reservasi->restaurant->foto ?? null,
-                    'nama_restoran' => $reservasi->restaurant->nama ?? '-',
-                    'tanggal' => \Carbon\Carbon::parse($reservasi->tanggal)->translatedFormat('l, d F Y'),
-                    'jumlah_orang' => $reservasi->jumlah_orang,
-                    'total_harga' => 'Rp ' . number_format($totalHarga, 0, ',', '.'),
-                    'status' => $reservasi->status, // opsional kalau mau tahu statusnya
-                ];
-            });
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $reservasiSemua,
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data riwayat pesanan berhasil diambil',
+                'data' => $reservasiSemua,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data riwayat pesanan',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
 }

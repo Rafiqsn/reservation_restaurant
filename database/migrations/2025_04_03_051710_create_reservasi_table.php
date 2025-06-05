@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->integer('jumlah_orang');
             $table->text('catatan')->nullable();
             $table->string('nomor_reservasi')->nullable();
-            $table->decimal('total_harga', 10, 2);
+            $table->decimal('total_harga', 10, 2)->nullable();
             $table->timestamps();
             $table->foreign('pengguna_id')->references('id')->on('pengguna')->onDelete('cascade');
             $table->foreign('restoran_id')->references('id')->on('restoran')->onDelete('cascade');

@@ -20,56 +20,79 @@ class CustomerController extends Controller
     {
         $user = Auth::user(); // user yang login
 
-        // kalau kamu mau pastikan perannya pemesan
         if ($user && $user->peran === 'pemesan') {
-            return new UserResource($user);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Data user pemesan berhasil diambil',
+                'data' => new UserResource($user),
+            ]);
         }
 
-        // kalau bukan pemesan, bisa return error atau data kosong
         return response()->json([
             'status' => 'error',
-            'message' => 'User bukan pemesan atau belum login'
+            'message' => 'User bukan pemesan atau belum login',
+            'error' => 'Unauthorized access or invalid role',
         ], 403);
     }
 
-
-        public function updateProfile(Request $request, $id)
+        public function updateProfile(Request $request)
     {
-        $user = User::where('peran', 'pemesan')->findOrFail($id);
+        try {
+             $user = $request->user();
 
-        $validated = $request->validate([
-            'nama' => 'sometimes|string|max:255',
-            'email' => [
-                'sometimes',
-                'email',
-                Rule::unique('pengguna')->ignore($user->id),
-            ],
-            'no_hp' => 'sometimes|string|max:20',
-            'kata_sandi' => 'nullable|string',
-            'kata_sandi_baru' => 'nullable|string|min:8',
-        ]);
-
-        if (isset($validated['nama'])) $user->nama = $validated['nama'];
-        if (isset($validated['email'])) $user->email = $validated['email'];
-        if (isset($validated['no_hp'])) $user->no_hp = $validated['no_hp'];
-
-        if (!empty($validated['kata_sandi_baru'])) {
-            if (!Hash::check($validated['kata_sandi'], $user->kata_sandi)) {
-                return response()->json(['message' => 'Password lama salah'], 422);
+            if (!$user || $user->peran !== 'pemesan') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User bukan pemesan atau belum login',
+                    'error' => 'Unauthorized',
+                ], 403);
             }
-            $user->kata_sandi = Hash::make($validated['kata_sandi_baru']);
+
+            $validated = $request->validate([
+                'nama' => 'sometimes|string|max:255',
+                'email' => [
+                    'sometimes',
+                    'email',
+                    Rule::unique('pengguna')->ignore($user->id),
+                ],
+                'no_hp' => 'sometimes|string|max:20',
+                'kata_sandi' => 'nullable|string',
+                'kata_sandi_baru' => 'nullable|string|min:8',
+            ]);
+
+            if (isset($validated['nama'])) $user->nama = $validated['nama'];
+            if (isset($validated['email'])) $user->email = $validated['email'];
+            if (isset($validated['no_hp'])) $user->no_hp = $validated['no_hp'];
+
+            if (!empty($validated['kata_sandi_baru'])) {
+                if (!Hash::check($validated['kata_sandi'], $user->kata_sandi)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Password lama salah',
+                        'error' => 'Old password does not match',
+                    ], 422);
+                }
+                $user->kata_sandi = Hash::make($validated['kata_sandi_baru']);
+            }
+
+            $user->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Profil berhasil diperbarui',
+                'data' => [
+                    'nama' => $user->nama,
+                    'email' => $user->email,
+                    'no_hp' => $user->no_hp,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memperbarui profil',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $user->save();
-
-         return response()->json([
-            'message' => 'Profil berhasil diperbarui',
-            'user' => [
-                'nama' => $user->nama,
-                'email' => $user->email,
-                'no_hp' => $user->no_hp,
-            ],
-        ]);
     }
 
 

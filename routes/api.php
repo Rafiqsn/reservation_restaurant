@@ -115,7 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         //lihat ulasan
         // routes/api.php
-        Route::get('/restoran/ulasan/{id}', [UlasanController::class, 'lihatUlasanRestoran']);
+        Route::get('/restoran/ulasan', [UlasanController::class, 'lihatUlasanRestoran']);
 
         //pengaturan
         Route::get('/restoran', [RestaurantController::class, 'showuser']);

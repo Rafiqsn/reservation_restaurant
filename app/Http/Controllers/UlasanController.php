@@ -83,10 +83,13 @@ class UlasanController extends Controller
             }
         }
 
-        public function lihatUlasanRestoran($id)
+            public function lihatUlasanRestoran(Request $request)
     {
+         $user = $request->user();
+
         try {
-            $restoran = Restaurant::with(['ulasan.pengguna'])->findOrFail($id);
+            // Ambil restoran milik user yang login, bisa pakai firstOrFail kalau cuma satu
+            $restoran = $user->restoran()->with(['ulasan.pengguna'])->firstOrFail();
 
             $ulasanList = $restoran->ulasan->map(function ($ulasan) {
                 return [
@@ -116,4 +119,5 @@ class UlasanController extends Controller
             ], 500);
         }
     }
+
 }

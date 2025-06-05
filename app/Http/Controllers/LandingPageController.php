@@ -65,6 +65,7 @@ class LandingPageController extends Controller
             $restoran = Restaurant::with([
                 'owner',
                 'jamOperasional',
+                'tables',
                 'menus' => fn($q) => $q->where('highlight', true)->limit(3),
                 'ulasan.reservasi.user',
                 'fotoTambahan'

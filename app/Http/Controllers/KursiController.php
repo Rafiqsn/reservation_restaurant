@@ -125,17 +125,23 @@ class KursiController extends Controller{
             $file = $request->file('denah_meja');
             $filename = 'denah_' . time() . '.' . $file->getClientOriginalExtension();
             $folder = "denah/{$restoran->id}";
+            $destinationPath = public_path($folder);
 
-            // Hapus denah lama
+            // Buat folder jika belum ada
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+
+            // Hapus denah lama jika ada
             if ($restoran->denah_meja) {
-                $oldFile = storage_path("app/public/$folder/{$restoran->denah_meja}");
+                $oldFile = public_path("$folder/{$restoran->denah_meja}");
                 if (file_exists($oldFile)) {
                     unlink($oldFile);
                 }
             }
 
-            // Simpan file baru
-            $file->storeAs($folder, $filename, 'public');
+            // Simpan file baru ke folder public
+            $file->move($destinationPath, $filename);
 
             // Simpan ke database
             $restoran->denah_meja = $filename;
@@ -146,7 +152,7 @@ class KursiController extends Controller{
                 'message' => 'Denah meja berhasil diunggah.',
                 'data' => [
                     'filename' => $filename,
-                    'url' => url("storage/$folder/$filename"),
+                    'url' => url("$folder/$filename"),
                 ],
             ]);
         } catch (\Illuminate\Validation\ValidationException $ve) {
@@ -164,6 +170,7 @@ class KursiController extends Controller{
             ], 500);
         }
     }
+
 
 
 

@@ -13,34 +13,44 @@ use Illuminate\Support\Facades\Log;
 class KursiController extends Controller{
 
         public function index(Request $request)
-    {
-        try {
-            $user = $request->user();
+{
+    try {
+        $user = $request->user();
 
-            if (!$user->restoran) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Restoran tidak ditemukan.',
-                ], 404);
-            }
-
-            $restoranId = $user->restoran->id;
-            $table = Table::where('restoran_id', $restoranId)->get();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Daftar kursi berhasil diambil.',
-                'data' => $table,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error mengambil daftar kursi: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        if (!$user->restoran) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Terjadi kesalahan saat mengambil data kursi.',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Restoran tidak ditemukan.',
+            ], 404);
         }
+
+        $restoran = $user->restoran;
+        $restoranId = $restoran->id;
+        $tables = Table::where('restoran_id', $restoranId)->get();
+
+        $denahMeja = $restoran->denah_meja ? [
+            'nama_file' => $restoran->denah_meja,
+            'url' => url("denah/{$restoran->id}/{$restoran->denah_meja}")
+        ] : null;
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Daftar kursi berhasil diambil.',
+            'data' => [
+                'denah_meja' => $denahMeja,
+                'tables' => $tables
+            ]
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Error mengambil daftar kursi: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Terjadi kesalahan saat mengambil data kursi.',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
 
 
 

@@ -7,10 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Http\Resources\MenuResource;
 
 class MenuController extends Controller
 {
-        public function index(Request $request)
+
+
+    public function index(Request $request)
     {
         try {
             $restoranId = $request->user()->restoran->id;
@@ -19,7 +22,7 @@ class MenuController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $menus
+                'data' => MenuResource::collection($menus)
             ]);
         } catch (\Exception $e) {
             Log::error('Gagal mengambil daftar menu: ' . $e->getMessage());
@@ -29,6 +32,8 @@ class MenuController extends Controller
             ], 500);
         }
     }
+
+
 
         public function show(Request $request, $id)
     {
@@ -191,5 +196,41 @@ class MenuController extends Controller
             ], 500);
         }
     }
+
+        public function search(Request $request)
+{
+    $request->validate([
+        'q' => 'required|string',
+    ]);
+
+    try {
+        $restoranId = $request->user()->restoran->id;
+        $query = $request->input('q');
+
+        $menus = Menu::where('restoran_id', $restoranId)
+            ->where('nama', 'like', '%' . $query . '%')
+            ->get();
+
+        if ($menus->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Menu tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => MenuResource::collection($menus),
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Gagal mencari menu: ' . $e->getMessage());
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Terjadi kesalahan saat mencari menu.',
+        ], 500);
+    }
+}
+
 
 }

@@ -114,8 +114,7 @@ class KursiController extends Controller{
 
 
 
-
-        public function uploadDenah(Request $request)
+    public function uploadDenah(Request $request)
     {
         try {
             $validated = $request->validate([
@@ -134,6 +133,8 @@ class KursiController extends Controller{
             $restoran = $user->restoran;
             $file = $request->file('denah_meja');
             $filename = 'denah_' . time() . '.' . $file->getClientOriginalExtension();
+
+            // Simpan ke folder seperti "denah/{restoran_id}/"
             $folder = "denah/{$restoran->id}";
             $destinationPath = public_path($folder);
 
@@ -142,7 +143,7 @@ class KursiController extends Controller{
                 mkdir($destinationPath, 0755, true);
             }
 
-            // Hapus denah lama jika ada
+            // Hapus file lama jika ada
             if ($restoran->denah_meja) {
                 $oldFile = public_path("$folder/{$restoran->denah_meja}");
                 if (file_exists($oldFile)) {
@@ -150,10 +151,10 @@ class KursiController extends Controller{
                 }
             }
 
-            // Simpan file baru ke folder public
+            // Simpan file baru
             $file->move($destinationPath, $filename);
 
-            // Simpan ke database
+            // Simpan nama file ke database
             $restoran->denah_meja = $filename;
             $restoran->save();
 

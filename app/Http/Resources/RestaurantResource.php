@@ -19,9 +19,9 @@ class RestaurantResource extends JsonResource
         'status' => $this->status,
         'kontak' => $this->kontak,
         'nib' => $this->nib,
-        'denah_meja' => $this->denah_meja ? [
+       'denah_meja' => $this->denah_meja ? [
             'nama_file' => $this->denah_meja,
-            'url' => url("denah/{$this->id}/{$this->denah_meja}")
+            'url' => asset("denah/{$this->id}/{$this->denah_meja}")
         ] : null,
 
         'latitude' => $this->latitude,

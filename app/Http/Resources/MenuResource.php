@@ -17,7 +17,7 @@ class MenuResource extends JsonResource
             'jenis' => $this->jenis,
             'harga' => $this->harga,
             'foto' => $this->foto, // hanya nama file
-            'foto_url' => $this->foto ? asset('storage/' . $this->foto) : null, // full URL
+            'foto_url' => $this->foto ? asset('menu/' . $this->foto) : null, // full URL
             'status' => $this->status,
             'highlight' => $this->highlight,
         ];

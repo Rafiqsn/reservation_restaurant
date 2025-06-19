@@ -469,27 +469,48 @@ class AdminController extends Controller
         }
     }
 
-    public function adminIndex()
+
+
+    public function adminIndex(Request $request)
     {
         try {
-            $restaurants = Restaurant::select('id', 'nama', 'deskripsi', 'lokasi', 'foto', 'is_recommended')
+            $restaurants = Restaurant::with(['fotoTambahan'])
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Daftar restoran berhasil diambil.',
-                'data' => $restaurants,
-            ]);
+            $resources = RestaurantResource::collection($restaurants);
+
+            $startNumber = ($restaurants->currentPage() - 1) * $restaurants->perPage() + 1;
+
+            $dataWithIndexKey = [];
+            foreach ($resources->collection->values() as $i => $item) {
+                $dataWithIndexKey["{$i}"] = array_merge(
+                    ['no' => $startNumber + $i],
+                    $item->toArray($request)
+                );
+            }
+
+            return response()->json(array_merge($dataWithIndexKey, [
+                'dir' => '/',
+                'path' => '/restoran',
+                'extension' => '.json',
+                'slug' => 'restoran',
+                'createdAt' => now()->toISOString(),
+                'updatedAt' => now()->toISOString(),
+            ]));
+
         } catch (\Exception $e) {
-            Log::error('Failed to fetch restaurants: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            Log::error('Failed to fetch restaurants: ' . $e->getMessage());
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Gagal mengambil daftar restoran.',
-                'error' => $e->getMessage(),
             ], 500);
         }
     }
+
+
+
 
     public function adminProfileShow(Request $request)
     {

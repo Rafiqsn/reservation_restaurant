@@ -195,25 +195,22 @@ class RestaurantController extends Controller
     }
 
 
+
+
     public function showuser(Request $request)
     {
         try {
             $user = $request->user();
-
-            $data = [
-                'nama' => $user->nama,
-                'email' => $user->email,
-                'no_hp' => $user->no_hp,
-                'nama_restoran' => $user->restoran->nama ?? null,
-                'lokasi' => $user->restoran->lokasi ?? null,
-                'deskripsi' => $user->restoran->deskripsi ?? null,
-                'surat_halal' => $user->restoran->surat_halal ?? null,
-                'nib' => $user->restoran->nib ?? null,
-            ];
+            $resto = $user->restoran;
 
             return response()->json([
                 'status' => 'success',
-                'data' => $data,
+                'data' => [
+                    'nama' => $user->nama,
+                    'email' => $user->email,
+                    'no_hp' => $user->no_hp,
+                    'restoran' => $resto ? new RestaurantResource($resto->load(['fotoTambahan', 'owner', 'jamOperasional', 'tables', 'menus', 'ulasan'])) : null,
+                ],
             ]);
         } catch (\Exception $e) {
             Log::error('Gagal menampilkan data user: ' . $e->getMessage());
@@ -224,6 +221,7 @@ class RestaurantController extends Controller
             ], 500);
         }
     }
+
 
 
         public function updateuser(Request $request)

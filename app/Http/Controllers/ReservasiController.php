@@ -145,7 +145,7 @@ class ReservasiController extends Controller
                 'status' => 'success',
                 'message' => 'Nota berhasil diambil.',
                 'nota' => [
-                    'reservasi_id' => $reservasi->reservasi_id,
+                    'reservasi_id' => $reservasi->id,
                     'nomor_reservasi' => $reservasi->nomor_reservasi,
                     'nama' => $reservasi->user->nama ?? '-',
                     'no_hp' => $reservasi->user->no_hp ?? '-',

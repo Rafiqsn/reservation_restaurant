@@ -72,16 +72,16 @@ class RestaurantController extends Controller
         }
     }
 
-    public function updateOperasional(Request $request, $restoranId)
+        public function updateOperasional(Request $request)
     {
         try {
             $user = Auth::user();
             $restoran = $user->restoran;
 
-            if (!$restoran || $restoran->id != $restoranId) {
+            if (!$restoran) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Restoran tidak ditemukan atau bukan milik Anda.',
+                    'message' => 'Restoran tidak ditemukan atau belum terhubung ke akun Anda.',
                 ], 404);
             }
 
@@ -97,7 +97,7 @@ class RestaurantController extends Controller
             $jam->jam_tutup = $validated['jam_tutup'] ?? $jam->jam_tutup ?? '17:00';
             $jam->save();
 
-            if (isset($validated['status'])) {
+            if (array_key_exists('status', $validated)) {
                 $restoran->update([
                     'status' => $validated['status'],
                 ]);
@@ -126,6 +126,7 @@ class RestaurantController extends Controller
             ], 500);
         }
     }
+
 
 
 

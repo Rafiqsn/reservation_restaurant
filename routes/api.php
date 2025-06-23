@@ -92,7 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['role:penyedia'])->prefix('penyedia')->group(function () {
         //dashboard
         Route::get('/dashboard', [RestaurantController::class, 'dashboard']);
-        Route::put('/dashboard/{id}', [RestaurantController::class, 'updateOperasional']);
+        Route::put('/dashboard', [RestaurantController::class, 'updateOperasional']);
 
         //manajemen meja
         Route::get('/kursi', [KursiController::class, 'index']);

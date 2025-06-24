@@ -146,6 +146,8 @@ class ReservasiController extends Controller
                 'message' => 'Nota berhasil diambil.',
                 'nota' => [
                     'reservasi_id' => $reservasi->id,
+                    'restoran_id' => $reservasi->restoran_id,
+                    'kursi_id' => $reservasi->kursi_id,
                     'nomor_reservasi' => $reservasi->nomor_reservasi,
                     'nama' => $reservasi->user->nama ?? '-',
                     'no_hp' => $reservasi->user->no_hp ?? '-',
@@ -265,6 +267,13 @@ class ReservasiController extends Controller
                 ], 422);
             }
 
+            if ($request->jumlah_orang > $kursi->kapasitas) {
+                return response()->json([
+                    'status' => 'Error',
+                    'message' => 'Jumlah orang melebihi kapasitas kursi. Maksimum kapasitas kursi adalah ' . $kursi->kapasitas . ' orang.',
+                ], 422);
+            }
+
             // Cek bentrok jadwal kursi
             $waktuMulai   = Carbon::parse($request->jam);
             $waktuSelesai = (clone $waktuMulai)->addHours(2);
@@ -367,6 +376,7 @@ class ReservasiController extends Controller
                     });
 
                     return [
+                        'reservasi_id' => $reservasi->id,
                         'id_reservasi' => $reservasi->nomor_reservasi ?? substr($reservasi->id, 0, 5),
                         'foto_restoran' => $reservasi->restaurant->foto ?? null,
                         'nama_restoran' => $reservasi->restaurant->nama ?? '-',
@@ -415,6 +425,7 @@ class ReservasiController extends Controller
 
                     return [
                         'reservasi_id' => $reservasi->id,
+                        'restoran_id' => $reservasi->restoran_id,
                         'id_reservasi' => $reservasi->nomor_reservasi ?? substr($reservasi->id, 0, 5),
                         'foto_restoran' => $reservasi->restaurant->foto ?? null,
                         'nama_restoran' => $reservasi->restaurant->nama ?? '-',

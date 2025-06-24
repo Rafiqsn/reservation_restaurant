@@ -67,6 +67,7 @@ class UlasanController extends Controller
                     'pengguna_id' => $reservasi->pengguna_id,
                     'rating' => $request->rating,
                     'komentar' => $request->komentar,
+
                 ]);
 
                 return response()->json([
@@ -97,7 +98,7 @@ class UlasanController extends Controller
                     'rating' => $ulasan->rating,
                     'komentar' => $ulasan->komentar,
                     'nama_pengulas' => optional($ulasan->pengguna)->nama ?? 'Anonim',
-                    'tanggal' => optional($ulasan->created_at)->format('Y-m-d'),
+                    'tanggal' => $ulasan->created_at->format('Y-m-d'), // atau translatedFormat
                 ];
             });
 

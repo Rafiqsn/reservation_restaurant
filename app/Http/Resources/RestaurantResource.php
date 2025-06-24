@@ -76,6 +76,7 @@ class RestaurantResource extends JsonResource
                     'rating' => $ulasan->rating,
                     'komentar' => $ulasan->komentar,
                     'pengulas' => optional($ulasan->reservasi->user)->nama,
+                    'tanggal' => $ulasan->created_at->format('Y-m-d'),
                 ];
             });
         }),
